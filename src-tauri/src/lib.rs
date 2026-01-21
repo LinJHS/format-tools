@@ -1,3 +1,10 @@
+mod pandoc;
+
+use pandoc::{
+    install_pandoc, install_crossref, is_pandoc_installed, 
+    is_crossref_installed, pandoc_version, convert_markdown
+};
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -8,7 +15,15 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            install_pandoc,
+            install_crossref,
+            is_pandoc_installed,
+            is_crossref_installed,
+            pandoc_version,
+            convert_markdown
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

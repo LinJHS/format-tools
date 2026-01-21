@@ -1,0 +1,128 @@
+pub mod config;
+pub mod downloader;
+pub mod converter;
+
+use tauri::{command, Window};
+
+use config::{PandocConfig, get_pandoc_download_urls, get_crossref_download_urls, get_install_dir};
+use downloader::{download_with_fallback, extract_archive, find_executable_in_dir};
+use converter::{ConvertOptions, convert_md_to_docx, check_pandoc_installed, check_crossref_installed, get_pandoc_version};
+
+#[command]
+pub async fn install_pandoc(window: Window) -> Result<String, String> {
+    let config = PandocConfig::default();
+    let urls = get_pandoc_download_urls(&config);
+    let install_dir = get_install_dir();
+    
+    // 创建临时下载目录
+    let temp_dir = std::env::temp_dir().join("pandoc_download");
+    std::fs::create_dir_all(&temp_dir)
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    
+    let archive_name = urls.primary.split('/').last().unwrap();
+    let archive_path = temp_dir.join(archive_name);
+    
+    // 下载
+    download_with_fallback(&urls, &archive_path, window.clone(), "pandoc-download-progress").await?;
+    
+    // 解压
+    let extract_dir = temp_dir.join("extracted");
+    extract_archive(&archive_path, &extract_dir).await?;
+    
+    // 查找并移动可执行文件
+    std::fs::create_dir_all(&install_dir)
+        .map_err(|e| format!("Failed to create install directory: {}", e))?;
+    
+    let exe_name = if cfg!(windows) { "pandoc.exe" } else { "pandoc" };
+    if let Some(exe_path) = find_executable_in_dir(&extract_dir, exe_name) {
+        let dest_path = install_dir.join(exe_name);
+        std::fs::copy(&exe_path, &dest_path)
+            .map_err(|e| format!("Failed to copy executable: {}", e))?;
+        
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&dest_path)
+                .map_err(|e| format!("Failed to get file metadata: {}", e))?
+                .permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&dest_path, perms)
+                .map_err(|e| format!("Failed to set permissions: {}", e))?;
+        }
+    } else {
+        return Err("Pandoc executable not found in archive".to_string());
+    }
+    
+    // 清理临时文件
+    let _ = std::fs::remove_dir_all(&temp_dir);
+    
+    Ok("Pandoc installed successfully".to_string())
+}
+
+#[command]
+pub async fn install_crossref(window: Window) -> Result<String, String> {
+    let config = PandocConfig::default();
+    let urls = get_crossref_download_urls(&config);
+    let install_dir = get_install_dir();
+    
+    // 创建临时下载目录
+    let temp_dir = std::env::temp_dir().join("crossref_download");
+    std::fs::create_dir_all(&temp_dir)
+        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    
+    let archive_name = urls.primary.split('/').last().unwrap();
+    let archive_path = temp_dir.join(archive_name);
+    
+    // 下载
+    download_with_fallback(&urls, &archive_path, window.clone(), "crossref-download-progress").await?;
+    
+    // 解压
+    let extract_dir = temp_dir.join("extracted");
+    extract_archive(&archive_path, &extract_dir).await?;
+    
+    // 查找并移动可执行文件
+    let exe_name = if cfg!(windows) { "pandoc-crossref.exe" } else { "pandoc-crossref" };
+    if let Some(exe_path) = find_executable_in_dir(&extract_dir, exe_name) {
+        let dest_path = install_dir.join(exe_name);
+        std::fs::copy(&exe_path, &dest_path)
+            .map_err(|e| format!("Failed to copy executable: {}", e))?;
+        
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&dest_path)
+                .map_err(|e| format!("Failed to get file metadata: {}", e))?
+                .permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&dest_path, perms)
+                .map_err(|e| format!("Failed to set permissions: {}", e))?;
+        }
+    } else {
+        return Err("Pandoc-crossref executable not found in archive".to_string());
+    }
+    
+    // 清理临时文件
+    let _ = std::fs::remove_dir_all(&temp_dir);
+    
+    Ok("Pandoc-crossref installed successfully".to_string())
+}
+
+#[command]
+pub fn is_pandoc_installed() -> bool {
+    check_pandoc_installed()
+}
+
+#[command]
+pub fn is_crossref_installed() -> bool {
+    check_crossref_installed()
+}
+
+#[command]
+pub fn pandoc_version() -> Result<String, String> {
+    get_pandoc_version()
+}
+
+#[command]
+pub async fn convert_markdown(options: ConvertOptions) -> Result<String, String> {
+    convert_md_to_docx(options).await
+}

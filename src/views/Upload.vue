@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
+import { pandocService } from '../services/pandocService'
+import DownloadProgress from '../components/DownloadProgress.vue'
 
 const uploadStore = useUploadStore()
 const router = useRouter()
@@ -9,6 +11,38 @@ const router = useRouter()
 const files = ref<File[]>([])
 const dragActive = ref(false)
 const uploadMethod = ref('text') // text, file, folder
+const isInstalling = ref(false)
+const installTitle = ref('')
+const downloadProgress = ref({ downloaded: 0, total: 0, percentage: 0 })
+
+// 检查并安装 Pandoc
+onMounted(async () => {
+  try {
+    const pandocInstalled = await pandocService.isPandocInstalled()
+    if (!pandocInstalled) {
+      isInstalling.value = true
+      installTitle.value = '正在下载 Pandoc...'
+      await pandocService.installPandoc((progress) => {
+        downloadProgress.value = progress
+      })
+    }
+
+    const crossrefInstalled = await pandocService.isCrossrefInstalled()
+    if (!crossrefInstalled) {
+      isInstalling.value = true
+      installTitle.value = '正在下载 Pandoc-crossref...'
+      downloadProgress.value = { downloaded: 0, total: 0, percentage: 0 }
+      await pandocService.installCrossref((progress) => {
+        downloadProgress.value = progress
+      })
+    }
+
+    isInstalling.value = false
+  } catch (error) {
+    console.error('安装失败:', error)
+    alert('安装 Pandoc 失败，请检查网络连接')
+  }
+})
 
 const handleDragOver = (e: DragEvent) => {
   e.preventDefault()
@@ -74,6 +108,13 @@ const clearSelection = () => {
 
 <template>
   <div class="upload-container">
+    <!-- 下载进度弹窗 -->
+    <DownloadProgress 
+      :is-visible="isInstalling"
+      :title="installTitle"
+      :progress="downloadProgress"
+    />
+    
     <div class="upload-content">
       <h1>开始转换</h1>
       
