@@ -134,5 +134,12 @@ export const pandocService = {
    */
   async prepareInput(payload: PrepareInputPayload): Promise<PreparedInput> {
     return await invoke<PreparedInput>('prepare_input_payload', { source: payload })
+  },
+
+  /**
+   * 准备模板，返回可用的运行时路径
+   */
+  async prepareTemplate(templateName: string): Promise<TemplateInfo> {
+    return await invoke<TemplateInfo>('prepare_template_protected', { template_name: templateName })
   }
 }
