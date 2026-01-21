@@ -32,6 +32,17 @@ export interface TemplateInfo {
   protected_path: string
 }
 
+export interface TemplateMeta {
+  id: string
+  name: string
+  description: string
+  icon?: string
+  category?: string
+  tags?: string[]
+  isFree?: boolean
+  isPro?: boolean
+}
+
 export interface DownloadProgress {
   downloaded: number
   total: number
@@ -140,6 +151,14 @@ export const pandocService = {
    * 准备模板，返回可用的运行时路径
    */
   async prepareTemplate(templateName: string): Promise<TemplateInfo> {
-    return await invoke<TemplateInfo>('prepare_template_protected', { template_name: templateName })
+    // Tauri v2 maps snake_case to camelCase in command args; Rust expects `templateName`.
+    return await invoke<TemplateInfo>('prepare_template_protected', { templateName })
+  }
+
+  /**
+   * 获取模板列表元数据
+   */
+  async getTemplates(): Promise<TemplateMeta[]> {
+    return await invoke<TemplateMeta[]>('list_templates')
   }
 }

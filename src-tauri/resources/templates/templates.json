@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "default",
+      "name": "经典模板",
+      "description": "简洁专业的 Word 模板，适合大多数场景。",
+      "icon": "📄",
+      "category": "free",
+      "tags": ["docx", "default"],
+      "isFree": true,
+      "isPro": false
+    }
+  ]
+}

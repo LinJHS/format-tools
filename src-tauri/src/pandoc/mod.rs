@@ -10,7 +10,7 @@ use config::{PandocConfig, get_pandoc_download_urls, get_crossref_download_urls,
 use downloader::{download_with_fallback, extract_archive, find_executable_in_dir};
 use converter::{ConvertOptions, convert_md_to_docx, check_pandoc_installed, check_crossref_installed, get_pandoc_version};
 use input::{InputSource, PreparedInput, prepare_input};
-use templates::{TemplateInfo, prepare_template};
+use templates::{TemplateInfo, TemplateMeta, prepare_template, list_templates};
 
 #[command]
 pub async fn install_pandoc(window: Window, app_handle: AppHandle) -> Result<String, String> {
@@ -137,6 +137,12 @@ pub async fn prepare_input_payload(app_handle: AppHandle, source: InputSource) -
 }
 
 #[command]
-pub fn prepare_template_protected(app_handle: AppHandle, template_name: String) -> Result<TemplateInfo, String> {
-    prepare_template(&app_handle, &template_name)
+pub fn prepare_template_protected(app_handle: AppHandle, templateName: String) -> Result<TemplateInfo, String> {
+    // Tauri v2 expects camelCase param names; use `templateName` here
+    prepare_template(&app_handle, &templateName)
+}
+
+#[command]
+pub fn list_templates(app_handle: AppHandle) -> Result<Vec<TemplateMeta>, String> {
+    list_templates(&app_handle)
 }

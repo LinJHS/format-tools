@@ -2,43 +2,32 @@
 import { ref, onMounted, computed } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
-import { pandocService, TemplateInfo } from '../services/pandocService'
+import { pandocService, TemplateInfo, TemplateMeta } from '../services/pandocService'
 
 const uploadStore = useUploadStore()
 const router = useRouter()
 
-interface Template {
-  id: string
-  name: string
-  description: string
-  icon: string
-  isFree: boolean
-  isPro: boolean
-}
 
-const templates = ref<Template[]>([
-  {
-    id: 'free',
-    name: '经典模板',
-    description: '简洁专业的 Word 文档模板，适合大多数场景使用',
-    icon: '📄',
-    isFree: true,
-    isPro: true
-  }
-])
-
-const selectedTemplate = ref<Template | null>(templates.value[0])
+const templates = ref<TemplateMeta[]>([])
+const selectedTemplate = ref<TemplateMeta | null>(null)
 const isLoading = ref(false)
 const error = ref('')
 
-onMounted(() => {
+onMounted(async () => {
   if (!uploadStore.preparedInput) {
     router.push('/upload')
+    return
   }
-  selectedTemplate.value = templates.value[0]
+  try {
+    const list = await pandocService.getTemplates()
+    templates.value = list
+    selectedTemplate.value = templates.value[0] || null
+  } catch (e) {
+    error.value = '无法加载模板列表，请稍后重试'
+  }
 })
 
-const selectTemplate = (template: Template) => {
+const selectTemplate = (template: TemplateMeta) => {
   selectedTemplate.value = template
   error.value = ''
 }

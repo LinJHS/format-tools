@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -70,4 +70,50 @@ fn find_template_resource(template_name: &str) -> Result<PathBuf, String> {
     }
 
     Err(format!("Template '{}' not found in resources", template_name))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemplateMeta {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub icon: Option<String>,
+    pub category: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub isFree: Option<bool>,
+    pub isPro: Option<bool>,
+}
+
+pub fn list_templates(app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, String> {
+    // Locate templates metadata file in resources/templates/templates.json
+    let metadata_candidates = [
+        // exe dir resources
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("resources").join("templates").join("templates.json"))),
+        // dev paths
+        Some(PathBuf::from("src-tauri/resources/templates/templates.json")),
+        Some(PathBuf::from("resources/templates/templates.json")),
+        Some(PathBuf::from("../resources/templates/templates.json")),
+    ];
+
+    for opt_path in metadata_candidates.iter().flatten() {
+        if opt_path.exists() {
+            let content = fs::read_to_string(opt_path)
+                .map_err(|e| format!("Failed to read metadata: {}", e))?;
+            let parsed: serde_json::Value = serde_json::from_str(&content)
+                .map_err(|e| format!("Invalid JSON in metadata: {}", e))?;
+            // Expect either { templates: [...] } or just an array
+            let templates_val = if parsed.is_object() {
+                parsed.get("templates").cloned().unwrap_or(serde_json::Value::Array(vec![]))
+            } else {
+                parsed
+            };
+            let list: Vec<TemplateMeta> = serde_json::from_value(templates_val)
+                .map_err(|e| format!("Failed to parse templates: {}", e))?;
+            return Ok(list);
+        }
+    }
+
+    Err("No templates metadata found in resources".to_string())
 }

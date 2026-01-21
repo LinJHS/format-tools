@@ -72,8 +72,62 @@ const handleGoHome = () => {
   router.push('/')
 }
 
+// 监听Tauri拖拽事件
+const setupFileDropListener = async () => {
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+    const window = getCurrentWindow()
+    
+    const unlisten = await window.onDragDropEvent((event) => {
+      if (event.payload.type === 'over') {
+        // 用户正在拖拽悬停
+        dragActive.value = true
+      } else if (event.payload.type === 'drop') {
+        // 用户放下文件
+        dragActive.value = false
+        const paths = event.payload.paths as string[]
+        
+        if (paths && paths.length > 0) {
+          const filePath = paths[0]
+          const fileName = filePath.split('\\').pop() || filePath.split('/').pop() || ''
+          
+          if (isSupportedFile(fileName)) {
+            // 创建一个虚拟File对象，但添加path属性用于Tauri
+            const fakeFile = {
+              name: fileName,
+              path: filePath,
+              size: 0,
+              type: '',
+              lastModified: Date.now(),
+              slice: () => new Blob(),
+              stream: () => new ReadableStream(),
+              text: () => Promise.resolve(''),
+              arrayBuffer: () => Promise.resolve(new ArrayBuffer(0))
+            } as any as File
+            
+            selectedFile.value = fakeFile
+            prepareError.value = ''
+            activeTab.value = 'file'
+          } else {
+            prepareError.value = '仅支持 .md/.markdown/.txt/.zip/.7z/.tar.gz/.tar.xz 文件'
+          }
+        }
+      } else {
+        // 文件拖拽取消
+        dragActive.value = false
+      }
+    })
+    
+    // 注意: 如果组件卸载需要调用 unlisten()
+    // 这里暂不处理，因为这是主要页面
+  } catch (error) {
+    console.warn('无法设置拖拽监听器:', error)
+  }
+}
+
 onMounted(() => {
   installDependencies()
+  setupFileDropListener()
 })
 
 const isSupportedFile = (fileName: string) => {
@@ -193,7 +247,7 @@ const nextStep = async () => {
 </script>
 
 <template>
-  <div class="upload-container">
+  <div class="min-h-screen p-8 bg-[radial-gradient(circle_at_20%_20%,_#f5f7ff,_#eef2ff_40%,_#e8edf8_80%)]">
     <!-- 下载进度弹窗 -->
     <DownloadProgress 
       :is-visible="isInstalling"
@@ -205,77 +259,54 @@ const nextStep = async () => {
       @retry="handleRetry"
       @go-home="handleGoHome"
     />
-    
-    <div class="upload-content" :class="{ 'pointer-events-none opacity-40': uploadDisabled }">
-      <div class="header">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl p-8 shadow-[0_22px_80px_rgba(52,64,84,0.14)] transition-all hover:-translate-y-0.5 hover:shadow-[0_26px_90px_rgba(52,64,84,0.18)]" :class="{ 'pointer-events-none opacity-40': uploadDisabled }">
+      <div class="flex items-center justify-between gap-4 mb-5">
         <div>
-          <h1>开始转换</h1>
-          <p class="subtitle">上传 Markdown 或直接粘贴内容，我们会自动提取图片并放到临时目录。</p>
+          <h1 class="m-0 text-[#1f2937] text-2xl tracking-tight">开始转换</h1>
+          <p class="m-0 mt-1 text-[#4b5563] text-sm">上传 Markdown 或直接粘贴内容，我们会自动提取图片并放到临时目录。</p>
         </div>
-        <span class="badge">Step 1 / 2</span>
+        <span class="bg-[#e0e7ff] text-[#3730a3] px-3 py-2 rounded-xl font-semibold text-xs">Step 1 / 2</span>
       </div>
 
-      <div class="tabs">
-        <button
-          class="tab"
-          :class="{ active: activeTab === 'file' }"
-          @click="switchTab('file')"
-        >
-          上传文件
-        </button>
-        <button
-          class="tab"
-          :class="{ active: activeTab === 'text' }"
-          @click="switchTab('text')"
-        >
-          输入 Markdown 文本
-        </button>
+      <div class="inline-flex border border-[#e5e7eb] rounded-xl overflow-hidden mb-4 bg-[#f9fafb]">
+        <button class="border-none px-4 py-3 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'file' }" @click="switchTab('file')">上传文件</button>
+        <button class="border-none px-4 py-3 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'text' }" @click="switchTab('text')">输入 Markdown 文本</button>
       </div>
 
-      <div v-if="activeTab === 'file'" class="panel">
+      <div v-if="activeTab === 'file'" class="border border-dashed border-[#e5e7eb] rounded-xl p-5 bg-[#f8fafc]">
         <div 
-          class="drop-area"
-          :class="{ active: dragActive }"
+          class="border-2 border-dashed border-[#c7d2fe] rounded-xl p-8 text-center bg-white transition-all cursor-pointer"
+          :class="{ 'border-[#7c3aed] bg-[#f5f3ff] shadow-[0_10px_30px_rgba(124,58,237,0.16)]': dragActive }"
           @dragover="handleDragOver"
           @dragleave="handleDragLeave"
           @drop="handleDrop"
           @click="openFilePicker"
         >
-          <input
-            type="file"
-            ref="fileInput"
-            class="hidden"
-            :accept="supportedExtensions.join(',')"
-            @change="handleFileSelect"
-          />
-          <div class="drop-icon">⬆</div>
-          <p class="drop-title">点击或拖拽文件到这里</p>
-          <p class="drop-desc">支持 .md / .markdown / .txt / .zip / .7z / .tar.gz / .tar.xz</p>
-          <p class="drop-note">我们会自动扫描 Markdown 并复制引用的图片到临时文件夹。</p>
+          <input type="file" ref="fileInput" class="hidden" :accept="supportedExtensions.join(',')" @change="handleFileSelect" />
+          <div class="text-3xl text-[#7c3aed] mb-2">⬆</div>
+          <p class="m-0 font-bold text-[#111827] text-lg">点击或拖拽文件到这里</p>
+          <p class="m-0 mt-1 text-[#4b5563] text-sm">支持 .md / .markdown / .txt / .zip / .7z / .tar.gz / .tar.xz</p>
+          <p class="m-0 mt-1 text-[#6b7280] text-xs">我们会自动扫描 Markdown 并复制引用的图片到临时文件夹。</p>
         </div>
 
-        <div v-if="selectedFile" class="selected">
-          <div class="file-chip">
-            <span class="file-name">{{ selectedFile.name }}</span>
-            <button class="chip-close" @click.stop="clearSelection">✕</button>
+        <div v-if="selectedFile" class="mt-3">
+          <div class="inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#eef2ff] text-[#1f2937] font-bold">
+            <span class="max-w-[420px] overflow-hidden text-ellipsis whitespace-nowrap">{{ selectedFile.name }}</span>
+            <button class="border-none bg-[#e0e7ff] text-[#312e81] rounded-full w-6 h-6 cursor-pointer font-bold" @click.stop="clearSelection">✕</button>
           </div>
         </div>
       </div>
 
-      <div v-else class="panel">
-        <label class="field-label">Markdown 文本</label>
-        <textarea
-          v-model="textContent"
-          class="text-input"
-          placeholder="粘贴你的 Markdown，图片引用会被自动扫描并复制到临时目录。"
-          rows="12"
-        ></textarea>
+      <div v-else class="border border-dashed border-[#e5e7eb] rounded-xl p-5 bg-[#f8fafc]">
+        <label class="block mb-2 font-bold text-[#1f2937]">Markdown 文本</label>
+        <textarea v-model="textContent" class="w-full border border-[#e5e7eb] rounded-xl p-3.5 text-sm font-mono bg-white text-[#111827] resize-y min-h-[260px]" placeholder="粘贴你的 Markdown，图片引用会被自动扫描并复制到临时目录。" rows="12"></textarea>
       </div>
 
-      <div v-if="prepareError" class="error-box">{{ prepareError }}</div>
+      <div v-if="prepareError" class="mt-3 px-3.5 py-3 rounded-xl bg-[#fef2f2] text-[#b91c1c] border border-[#fecdd3]">{{ prepareError }}</div>
 
-      <div class="button-group">
-        <button class="btn-next" :disabled="uploadDisabled || isPreparing" @click="nextStep">
+      <div class="flex justify-end mt-5">
+        <button class="bg-[linear-gradient(90deg,_#22c55e,_#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="uploadDisabled || isPreparing" @click="nextStep">
           {{ isPreparing ? '正在整理...' : '下一步' }}
         </button>
       </div>
@@ -284,242 +315,5 @@ const nextStep = async () => {
 </template>
 
 <style scoped>
-.upload-container {
-  min-height: 100vh;
-  padding: 32px;
-  background: radial-gradient(circle at 20% 20%, #f5f7ff, #eef2ff 40%, #e8edf8 80%);
-}
-
-.upload-content {
-  max-width: 960px;
-  margin: 0 auto;
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 22px 80px rgba(52, 64, 84, 0.14);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.upload-content:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 26px 90px rgba(52, 64, 84, 0.18);
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-h1 {
-  margin: 0;
-  color: #1f2937;
-  font-size: 28px;
-  letter-spacing: -0.4px;
-}
-
-.subtitle {
-  margin: 4px 0 0 0;
-  color: #4b5563;
-  font-size: 14px;
-}
-
-.badge {
-  background: #e0e7ff;
-  color: #3730a3;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.tabs {
-  display: inline-flex;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 16px;
-  background: #f9fafb;
-}
-
-.tab {
-  border: none;
-  padding: 12px 18px;
-  font-weight: 600;
-  background: transparent;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tab.active {
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.tab:not(.active):hover {
-  background: #eef2ff;
-}
-
-.panel {
-  border: 1px dashed #e5e7eb;
-  border-radius: 14px;
-  padding: 20px;
-  background: #f8fafc;
-}
-
-.drop-area {
-  border: 2px dashed #c7d2fe;
-  border-radius: 14px;
-  padding: 32px;
-  text-align: center;
-  background: #fff;
-  transition: all 0.25s ease;
-  cursor: pointer;
-}
-
-.drop-area.active {
-  border-color: #7c3aed;
-  background: #f5f3ff;
-  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.16);
-}
-
-.drop-icon {
-  font-size: 32px;
-  color: #7c3aed;
-  margin-bottom: 10px;
-}
-
-.drop-title {
-  margin: 0;
-  font-weight: 700;
-  color: #111827;
-  font-size: 18px;
-}
-
-.drop-desc {
-  margin: 6px 0;
-  color: #4b5563;
-  font-size: 14px;
-}
-
-.drop-note {
-  margin: 0;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.selected {
-  margin-top: 12px;
-}
-
-.file-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: #eef2ff;
-  color: #1f2937;
-  font-weight: 600;
-}
-
-.file-name {
-  max-width: 420px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chip-close {
-  border: none;
-  background: #e0e7ff;
-  color: #312e81;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.field-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.text-input {
-  width: 100%;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 14px;
-  font-size: 14px;
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  background: #fff;
-  color: #111827;
-  resize: vertical;
-  min-height: 260px;
-}
-
-.error-box {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecdd3;
-}
-
-.button-group {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.btn-next {
-  background: linear-gradient(90deg, #22c55e, #16a34a);
-  color: #fff;
-  padding: 14px 28px;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 12px 30px rgba(34, 197, 94, 0.25);
-}
-
-.btn-next:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.btn-next:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 34px rgba(34, 197, 94, 0.3);
-}
-
-@media (max-width: 768px) {
-  .upload-container {
-    padding: 18px;
-  }
-
-  .upload-content {
-    padding: 20px;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  h1 {
-    font-size: 22px;
-  }
-}
+/* 样式主要由 Tailwind 提供；这里保留空块用于后续微调 */
 </style>
