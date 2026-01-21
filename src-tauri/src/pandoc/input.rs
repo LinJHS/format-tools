@@ -1,10 +1,9 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 use super::downloader::extract_archive;
 
@@ -200,7 +199,7 @@ fn build_session_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
     let root = app_handle
         .path()
         .cache_dir()
-        .ok_or_else(|| "Failed to get cache dir".to_string())?;
+        .map_err(|e| format!("Failed to get cache dir: {}", e))?;
 
     let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
