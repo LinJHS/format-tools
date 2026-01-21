@@ -1,5 +1,6 @@
 use std::process::Command;
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 
 use super::config::{get_pandoc_executable_path, get_crossref_executable_path};
 
@@ -12,8 +13,8 @@ pub struct ConvertOptions {
     pub use_crossref: bool,
 }
 
-pub async fn convert_md_to_docx(options: ConvertOptions) -> Result<String, String> {
-    let pandoc_exe = get_pandoc_executable_path();
+pub async fn convert_md_to_docx(app: &AppHandle, options: ConvertOptions) -> Result<String, String> {
+    let pandoc_exe = get_pandoc_executable_path(app)?;
     
     if !pandoc_exe.exists() {
         return Err("Pandoc not installed. Please install it first.".to_string());
@@ -38,7 +39,7 @@ pub async fn convert_md_to_docx(options: ConvertOptions) -> Result<String, Strin
     
     // 使用 crossref 过滤器
     if options.use_crossref {
-        let crossref_exe = get_crossref_executable_path();
+        let crossref_exe = get_crossref_executable_path(app)?;
         if crossref_exe.exists() {
             cmd.arg("-F").arg(crossref_exe);
         }
@@ -56,16 +57,20 @@ pub async fn convert_md_to_docx(options: ConvertOptions) -> Result<String, Strin
     }
 }
 
-pub fn check_pandoc_installed() -> bool {
-    get_pandoc_executable_path().exists()
+pub fn check_pandoc_installed(app: &AppHandle) -> bool {
+    get_pandoc_executable_path(app)
+        .map(|path| path.exists())
+        .unwrap_or(false)
 }
 
-pub fn check_crossref_installed() -> bool {
-    get_crossref_executable_path().exists()
+pub fn check_crossref_installed(app: &AppHandle) -> bool {
+    get_crossref_executable_path(app)
+        .map(|path| path.exists())
+        .unwrap_or(false)
 }
 
-pub fn get_pandoc_version() -> Result<String, String> {
-    let pandoc_exe = get_pandoc_executable_path();
+pub fn get_pandoc_version(app: &AppHandle) -> Result<String, String> {
+    let pandoc_exe = get_pandoc_executable_path(app)?;
     
     if !pandoc_exe.exists() {
         return Err("Pandoc not installed".to_string());

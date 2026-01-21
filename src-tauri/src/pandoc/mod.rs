@@ -2,17 +2,17 @@ pub mod config;
 pub mod downloader;
 pub mod converter;
 
-use tauri::{command, Window};
+use tauri::{command, Window, AppHandle};
 
 use config::{PandocConfig, get_pandoc_download_urls, get_crossref_download_urls, get_install_dir};
 use downloader::{download_with_fallback, extract_archive, find_executable_in_dir};
 use converter::{ConvertOptions, convert_md_to_docx, check_pandoc_installed, check_crossref_installed, get_pandoc_version};
 
 #[command]
-pub async fn install_pandoc(window: Window) -> Result<String, String> {
+pub async fn install_pandoc(window: Window, app_handle: AppHandle) -> Result<String, String> {
     let config = PandocConfig::default();
     let urls = get_pandoc_download_urls(&config);
-    let install_dir = get_install_dir();
+    let install_dir = get_install_dir(&app_handle)?;
     
     // 创建临时下载目录
     let temp_dir = std::env::temp_dir().join("pandoc_download");
@@ -60,10 +60,10 @@ pub async fn install_pandoc(window: Window) -> Result<String, String> {
 }
 
 #[command]
-pub async fn install_crossref(window: Window) -> Result<String, String> {
+pub async fn install_crossref(window: Window, app_handle: AppHandle) -> Result<String, String> {
     let config = PandocConfig::default();
     let urls = get_crossref_download_urls(&config);
-    let install_dir = get_install_dir();
+    let install_dir = get_install_dir(&app_handle)?;
     
     // 创建临时下载目录
     let temp_dir = std::env::temp_dir().join("crossref_download");
@@ -108,21 +108,21 @@ pub async fn install_crossref(window: Window) -> Result<String, String> {
 }
 
 #[command]
-pub fn is_pandoc_installed() -> bool {
-    check_pandoc_installed()
+pub fn is_pandoc_installed(app_handle: AppHandle) -> bool {
+    check_pandoc_installed(&app_handle)
 }
 
 #[command]
-pub fn is_crossref_installed() -> bool {
-    check_crossref_installed()
+pub fn is_crossref_installed(app_handle: AppHandle) -> bool {
+    check_crossref_installed(&app_handle)
 }
 
 #[command]
-pub fn pandoc_version() -> Result<String, String> {
-    get_pandoc_version()
+pub fn pandoc_version(app_handle: AppHandle) -> Result<String, String> {
+    get_pandoc_version(&app_handle)
 }
 
 #[command]
-pub async fn convert_markdown(options: ConvertOptions) -> Result<String, String> {
-    convert_md_to_docx(options).await
+pub async fn convert_markdown(app_handle: AppHandle, options: ConvertOptions) -> Result<String, String> {
+    convert_md_to_docx(&app_handle, options).await
 }

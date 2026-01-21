@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PandocConfig {
@@ -72,25 +73,31 @@ pub fn get_crossref_download_urls(config: &PandocConfig) -> DownloadUrls {
     }
 }
 
-pub fn get_install_dir() -> PathBuf {
-    // 使用临时目录作为后备方案
-    std::env::temp_dir().join("format_tools_pandoc")
+pub fn get_install_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = app.path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    let install_dir = app_data_dir.join("pandoc");
+    Ok(install_dir)
 }
 
-pub fn get_pandoc_executable_path() -> PathBuf {
-    let install_dir = get_install_dir();
-    if cfg!(windows) {
+pub fn get_pandoc_executable_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let install_dir = get_install_dir(app)?;
+    let exe_path = if cfg!(windows) {
         install_dir.join("pandoc.exe")
     } else {
         install_dir.join("pandoc")
-    }
+    };
+    Ok(exe_path)
 }
 
-pub fn get_crossref_executable_path() -> PathBuf {
-    let install_dir = get_install_dir();
-    if cfg!(windows) {
+pub fn get_crossref_executable_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let install_dir = get_install_dir(app)?;
+    let exe_path = if cfg!(windows) {
         install_dir.join("pandoc-crossref.exe")
     } else {
         install_dir.join("pandoc-crossref")
-    }
+    };
+    Ok(exe_path)
 }
