@@ -1,5 +1,6 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -57,9 +58,8 @@ pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Resul
         }
         InputSource::Text { content, suggested_name } => {
             let markdown_path = session_dir.join("document.md");
-            fs::write(&markdown_path, &content).map_err(|e| format!("Failed to write markdown: {}", e))?;
-
-            let copied_images = extract_and_copy_images(&content, None, &assets_dir)?;
+            let (copied_images, rewritten) = extract_and_copy_images(&content, None, &assets_dir)?;
+            fs::write(&markdown_path, rewritten).map_err(|e| format!("Failed to write markdown: {}", e))?;
 
             Ok(PreparedInput {
                 markdown_path: markdown_path.to_string_lossy().to_string(),
@@ -104,7 +104,9 @@ async fn handle_file_input(input_path: &Path, session_dir: &Path, assets_dir: &P
     let content = fs::read_to_string(&markdown_path)
         .map_err(|e| format!("Failed to read markdown: {}", e))?;
 
-    let copied_images = extract_and_copy_images(&content, base_dir.as_deref(), assets_dir)?;
+    let (copied_images, rewritten) = extract_and_copy_images(&content, base_dir.as_deref(), assets_dir)?;
+    fs::write(&markdown_path, rewritten)
+        .map_err(|e| format!("Failed to write processed markdown: {}", e))?;
 
     Ok((markdown_path, copied_images))
 }
@@ -137,46 +139,55 @@ fn find_first_markdown(dir: &Path) -> Option<PathBuf> {
     None
 }
 
-fn extract_and_copy_images(content: &str, base_dir: Option<&Path>, assets_dir: &Path) -> Result<Vec<String>, String> {
-    let img_regex = Regex::new(r"!\[[^\]]*\]\((?P<path>[^)]+)\)")
+fn extract_and_copy_images(content: &str, base_dir: Option<&Path>, assets_dir: &Path) -> Result<(Vec<String>, String), String> {
+    let img_regex = Regex::new(r"!\[(?P<alt>[^\]]*)\]\((?P<path>[^)]+)\)")
         .map_err(|e| format!("Failed to compile regex: {}", e))?;
 
     let mut copied = Vec::new();
+    let mut name_map: HashMap<String, String> = HashMap::new();
 
-    for caps in img_regex.captures_iter(content) {
-        if let Some(raw_path) = caps.name("path") {
-            let img_path_str = raw_path.as_str().trim();
+    let rewritten = img_regex
+        .replace_all(content, |caps: &regex::Captures| {
+            let img_path_str = caps.name("path").map(|m| m.as_str().trim()).unwrap_or("");
 
             if img_path_str.starts_with("http://") || img_path_str.starts_with("https://") {
-                continue;
+                return caps.get(0).map(|m| m.as_str()).unwrap_or("").to_string();
+            }
+
+            if let Some(existing) = name_map.get(img_path_str) {
+                let alt = caps.name("alt").map(|m| m.as_str()).unwrap_or("");
+                return format!("![{}](assets/{})", alt, existing);
             }
 
             let resolved = resolve_image_path(img_path_str, base_dir);
             if let Some(source) = resolved {
                 if source.is_file() {
-                    let file_name = source
+                    let base_name = source
                         .file_name()
                         .map(|n| n.to_string_lossy().to_string())
                         .unwrap_or_else(|| "image".to_string());
 
-                    let mut target = assets_dir.join(&file_name);
-                    let mut counter = 1;
-                    while target.exists() {
-                        let stamped = format!("{}_{}", counter, file_name);
-                        target = assets_dir.join(stamped);
-                        counter += 1;
+                    let unique_name = make_unique_name(&base_name, assets_dir);
+                    let target = assets_dir.join(&unique_name);
+
+                    if let Err(err) = fs::copy(&source, &target) {
+                        eprintln!("Failed to copy image {}: {}", img_path_str, err);
+                        return caps.get(0).map(|m| m.as_str()).unwrap_or("").to_string();
                     }
 
-                    fs::copy(&source, &target)
-                        .map_err(|e| format!("Failed to copy image {}: {}", img_path_str, e))?;
-
+                    name_map.insert(img_path_str.to_string(), unique_name.clone());
                     copied.push(target.to_string_lossy().to_string());
+
+                    let alt = caps.name("alt").map(|m| m.as_str()).unwrap_or("");
+                    return format!("![{}](assets/{})", alt, unique_name);
                 }
             }
-        }
-    }
 
-    Ok(copied)
+            caps.get(0).map(|m| m.as_str()).unwrap_or("").to_string()
+        })
+        .into_owned();
+
+    Ok((copied, rewritten))
 }
 
 fn resolve_image_path(img: &str, base_dir: Option<&Path>) -> Option<PathBuf> {
@@ -193,6 +204,25 @@ fn resolve_image_path(img: &str, base_dir: Option<&Path>) -> Option<PathBuf> {
     }
 
     None
+}
+
+fn make_unique_name(base_name: &str, assets_dir: &Path) -> String {
+    let mut candidate = base_name.to_string();
+    let mut counter = 1;
+
+    let mut parts = base_name.rsplitn(2, '.').collect::<Vec<_>>();
+    parts.reverse();
+
+    while assets_dir.join(&candidate).exists() {
+        if parts.len() == 2 {
+            candidate = format!("{}_{}.{}", parts[0], counter, parts[1]);
+        } else {
+            candidate = format!("{}_{}", base_name, counter);
+        }
+        counter += 1;
+    }
+
+    candidate
 }
 
 fn build_session_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {

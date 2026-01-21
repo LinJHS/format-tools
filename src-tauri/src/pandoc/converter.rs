@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::process::Command;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
@@ -26,6 +27,10 @@ pub async fn convert_md_to_docx(app: &AppHandle, options: ConvertOptions) -> Res
     cmd.arg(&options.input_file)
        .arg("-o")
        .arg(&options.output_file);
+
+    if let Some(parent) = Path::new(&options.input_file).parent() {
+        cmd.current_dir(parent);
+    }
     
     // 参考文档（模板）
     if let Some(ref_doc) = &options.reference_doc {
