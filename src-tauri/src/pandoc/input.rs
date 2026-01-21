@@ -1,0 +1,211 @@
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::AppHandle;
+
+use super::downloader::extract_archive;
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "source_type", rename_all = "snake_case")]
+pub enum InputSource {
+    File {
+        path: String,
+        original_name: Option<String>,
+    },
+    Text {
+        content: String,
+        suggested_name: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PreparedInput {
+    pub markdown_path: String,
+    pub assets_dir: String,
+    pub image_count: usize,
+    pub copied_images: Vec<String>,
+    pub source_name: Option<String>,
+}
+
+pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Result<PreparedInput, String> {
+    let session_dir = build_session_dir(app_handle)?;
+    fs::create_dir_all(&session_dir).map_err(|e| format!("Failed to create session dir: {}", e))?;
+
+    let assets_dir = session_dir.join("assets");
+    fs::create_dir_all(&assets_dir).map_err(|e| format!("Failed to create assets dir: {}", e))?;
+
+    match source {
+        InputSource::File { path, original_name } => {
+            let input_path = PathBuf::from(path.clone());
+            if !input_path.exists() {
+                return Err("File not found".to_string());
+            }
+
+            let file_name = original_name.or_else(|| input_path.file_name().map(|n| n.to_string_lossy().to_string()));
+
+            let (markdown_path, copied_images) = handle_file_input(&input_path, &session_dir, &assets_dir).await?;
+
+            Ok(PreparedInput {
+                markdown_path: markdown_path.to_string_lossy().to_string(),
+                assets_dir: assets_dir.to_string_lossy().to_string(),
+                image_count: copied_images.len(),
+                copied_images,
+                source_name: file_name,
+            })
+        }
+        InputSource::Text { content, suggested_name } => {
+            let markdown_path = session_dir.join("document.md");
+            fs::write(&markdown_path, &content).map_err(|e| format!("Failed to write markdown: {}", e))?;
+
+            let copied_images = extract_and_copy_images(&content, None, &assets_dir)?;
+
+            Ok(PreparedInput {
+                markdown_path: markdown_path.to_string_lossy().to_string(),
+                assets_dir: assets_dir.to_string_lossy().to_string(),
+                image_count: copied_images.len(),
+                copied_images,
+                source_name: suggested_name,
+            })
+        }
+    }
+}
+
+async fn handle_file_input(input_path: &Path, session_dir: &Path, assets_dir: &Path) -> Result<(PathBuf, Vec<String>), String> {
+    let lower_name = input_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    let (markdown_path, base_dir) = if is_archive(&lower_name) {
+        let extract_dir = session_dir.join("extracted");
+        fs::create_dir_all(&extract_dir).map_err(|e| format!("Failed to create extract dir: {}", e))?;
+
+        extract_archive(input_path, &extract_dir)
+            .await
+            .map_err(|e| format!("Failed to extract archive: {}", e))?;
+
+        let md_file = find_first_markdown(&extract_dir)
+            .ok_or_else(|| "No markdown file found in archive".to_string())?;
+        let target_md = session_dir.join("document.md");
+        fs::copy(&md_file, &target_md)
+            .map_err(|e| format!("Failed to copy markdown: {}", e))?;
+
+        (target_md, md_file.parent().map(|p| p.to_path_buf()))
+    } else {
+        // treat as a direct markdown/text file
+        let target_md = session_dir.join("document.md");
+        fs::copy(input_path, &target_md).map_err(|e| format!("Failed to copy markdown: {}", e))?;
+        (target_md, input_path.parent().map(|p| p.to_path_buf()))
+    };
+
+    let content = fs::read_to_string(&markdown_path)
+        .map_err(|e| format!("Failed to read markdown: {}", e))?;
+
+    let copied_images = extract_and_copy_images(&content, base_dir.as_deref(), assets_dir)?;
+
+    Ok((markdown_path, copied_images))
+}
+
+fn is_archive(name: &str) -> bool {
+    name.ends_with(".zip")
+        || name.ends_with(".tar.gz")
+        || name.ends_with(".tar.xz")
+        || name.ends_with(".7z")
+}
+
+fn find_first_markdown(dir: &Path) -> Option<PathBuf> {
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    let ext = ext.to_lowercase();
+                    if ext == "md" || ext == "markdown" || ext == "txt" {
+                        return Some(path);
+                    }
+                }
+            } else if path.is_dir() {
+                if let Some(found) = find_first_markdown(&path) {
+                    return Some(found);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn extract_and_copy_images(content: &str, base_dir: Option<&Path>, assets_dir: &Path) -> Result<Vec<String>, String> {
+    let img_regex = Regex::new(r"!\[[^\]]*\]\((?P<path>[^)]+)\)")
+        .map_err(|e| format!("Failed to compile regex: {}", e))?;
+
+    let mut copied = Vec::new();
+
+    for caps in img_regex.captures_iter(content) {
+        if let Some(raw_path) = caps.name("path") {
+            let img_path_str = raw_path.as_str().trim();
+
+            if img_path_str.starts_with("http://") || img_path_str.starts_with("https://") {
+                continue;
+            }
+
+            let resolved = resolve_image_path(img_path_str, base_dir);
+            if let Some(source) = resolved {
+                if source.is_file() {
+                    let file_name = source
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "image".to_string());
+
+                    let mut target = assets_dir.join(&file_name);
+                    let mut counter = 1;
+                    while target.exists() {
+                        let stamped = format!("{}_{}", counter, file_name);
+                        target = assets_dir.join(stamped);
+                        counter += 1;
+                    }
+
+                    fs::copy(&source, &target)
+                        .map_err(|e| format!("Failed to copy image {}: {}", img_path_str, e))?;
+
+                    copied.push(target.to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+
+    Ok(copied)
+}
+
+fn resolve_image_path(img: &str, base_dir: Option<&Path>) -> Option<PathBuf> {
+    let candidate = Path::new(img);
+    if candidate.is_absolute() {
+        return Some(candidate.to_path_buf());
+    }
+
+    if let Some(base) = base_dir {
+        let joined = base.join(candidate);
+        if joined.exists() {
+            return Some(joined);
+        }
+    }
+
+    None
+}
+
+fn build_session_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
+    let root = app_handle
+        .path()
+        .cache_dir()
+        .ok_or_else(|| "Failed to get cache dir".to_string())?;
+
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("Time error: {}", e))?
+        .as_millis();
+
+    Ok(root.join("format-tools").join(format!("session-{}", millis)))
+}

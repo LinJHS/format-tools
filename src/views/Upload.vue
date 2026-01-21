@@ -2,22 +2,28 @@
 import { ref, onMounted } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
-import { pandocService } from '../services/pandocService'
+import { pandocService, PreparedInput, PrepareInputPayload } from '../services/pandocService'
 import DownloadProgress from '../components/DownloadProgress.vue'
 
 const uploadStore = useUploadStore()
 const router = useRouter()
 
-const files = ref<File[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
+const activeTab = ref<'file' | 'text'>('file')
+const selectedFile = ref<File | null>(null)
+const textContent = ref('')
 const dragActive = ref(false)
-const uploadMethod = ref('text') // text, file, folder
 const isInstalling = ref(false)
 const installTitle = ref('正在准备必要组件')
 const installDetail = ref('')
 const downloadProgress = ref({ downloaded: 0, total: 0, percentage: 0 })
 const installError = ref('')
 const isError = ref(false)
-const uploadDisabled = ref(false) // 禁用上传功能
+const uploadDisabled = ref(false)
+const isPreparing = ref(false)
+const prepareError = ref('')
+
+const supportedExtensions = ['.md', '.markdown', '.txt', '.zip', '.7z', '.tar.gz', '.tar.xz']
 
 const installDependencies = async () => {
   try {
@@ -58,20 +64,22 @@ const installDependencies = async () => {
   }
 }
 
-// 重试下载
 const handleRetry = () => {
   installDependencies()
 }
 
-// 返回首页
 const handleGoHome = () => {
   router.push('/')
 }
 
-// 检查并安装 Pandoc
 onMounted(() => {
   installDependencies()
 })
+
+const isSupportedFile = (fileName: string) => {
+  const lower = fileName.toLowerCase()
+  return supportedExtensions.some((ext) => lower.endsWith(ext))
+}
 
 const handleDragOver = (e: DragEvent) => {
   e.preventDefault()
@@ -82,59 +90,105 @@ const handleDragLeave = () => {
   dragActive.value = false
 }
 
+const openFilePicker = () => {
+  fileInput.value?.click()
+}
+
 const handleDrop = (e: DragEvent) => {
   e.preventDefault()
   dragActive.value = false
-  
-  if (e.dataTransfer?.files) {
-    files.value = Array.from(e.dataTransfer.files).filter(file =>
-      file.name.endsWith('.md') || file.name.endsWith('.txt')
-    )
+
+  const fileList = e.dataTransfer?.files
+  if (fileList && fileList.length > 0) {
+    const file = fileList[0]
+    if (isSupportedFile(file.name)) {
+      selectedFile.value = file
+      prepareError.value = ''
+    } else {
+      prepareError.value = '仅支持 .md/.markdown/.txt/.zip/.7z/.tar.gz/.tar.xz 文件'
+    }
   }
 }
 
 const handleFileSelect = (e: Event) => {
   const input = e.target as HTMLInputElement
-  if (input.files) {
-    files.value = Array.from(input.files).filter(file =>
-      file.name.endsWith('.md') || file.name.endsWith('.txt')
-    )
-  }
-}
-
-const handleFolderSelect = (e: Event) => {
-  const input = e.target as HTMLInputElement
-  if (input.files) {
-    files.value = Array.from(input.files).filter(file =>
-      file.name.endsWith('.md') || file.name.endsWith('.txt')
-    )
-  }
-}
-
-const handleCompressedFileSelect = (e: Event) => {
-  const input = e.target as HTMLInputElement
-  if (input.files) {
-    files.value = Array.from(input.files).filter(file => {
-      const ext = file.name.toLowerCase()
-      return ext.endsWith('.zip') || ext.endsWith('.rar') || ext.endsWith('.7z')
-    })
-  }
-}
-
-const nextStep = () => {
-  if (uploadDisabled.value) {
-    return
-  }
-  if (files.value.length > 0 || uploadMethod.value === 'text') {
-    uploadStore.addFiles(files.value)
-    uploadStore.setStep(2)
-    router.push('/template')
+  if (input.files && input.files.length > 0) {
+    const file = input.files[0]
+    if (isSupportedFile(file.name)) {
+      selectedFile.value = file
+      prepareError.value = ''
+    } else {
+      prepareError.value = '仅支持 .md/.markdown/.txt/.zip/.7z/.tar.gz/.tar.xz 文件'
+    }
   }
 }
 
 const clearSelection = () => {
-  files.value = []
-  uploadMethod.value = 'text'
+  selectedFile.value = null
+  prepareError.value = ''
+}
+
+const switchTab = (tab: 'file' | 'text') => {
+  activeTab.value = tab
+  prepareError.value = ''
+}
+
+const buildPayload = (): PrepareInputPayload | null => {
+  if (activeTab.value === 'file') {
+    if (!selectedFile.value) {
+      prepareError.value = '请先选择要处理的文件'
+      return null
+    }
+
+    const filePath = (selectedFile.value as any).path as string | undefined
+    if (!filePath) {
+      prepareError.value = '无法获取文件路径，请通过桌面客户端选择文件'
+      return null
+    }
+
+    return {
+      source_type: 'file',
+      path: filePath,
+      original_name: selectedFile.value.name
+    }
+  }
+
+  if (!textContent.value.trim()) {
+    prepareError.value = '请输入 Markdown 内容'
+    return null
+  }
+
+  return {
+    source_type: 'text',
+    content: textContent.value,
+    suggested_name: 'input.md'
+  }
+}
+
+const nextStep = async () => {
+  if (uploadDisabled.value || isPreparing.value) {
+    return
+  }
+
+  const payload = buildPayload()
+  if (!payload) return
+
+  try {
+    isPreparing.value = true
+    const prepared: PreparedInput = await pandocService.prepareInput(payload)
+
+    uploadStore.setMode(activeTab.value)
+    uploadStore.addFiles(selectedFile.value ? [selectedFile.value] : [])
+    uploadStore.setMarkdownText(textContent.value)
+    uploadStore.setPreparedInput(prepared)
+    uploadStore.setStep(2)
+    router.push('/template')
+  } catch (error) {
+    console.error('预处理失败:', error)
+    prepareError.value = '预处理失败，请检查文件内容或稍后重试'
+  } finally {
+    isPreparing.value = false
+  }
 }
 </script>
 
@@ -152,97 +206,78 @@ const clearSelection = () => {
       @go-home="handleGoHome"
     />
     
-    <div class="upload-content" :class="{ 'pointer-events-none opacity-50': uploadDisabled }">
-      <h1>开始转换</h1>
-      
-      <div class="upload-methods">
-        <!-- 文本框 -->
-        <div class="method-section">
-          <h3>直接输入文本</h3>
-          <textarea 
-            placeholder="将您的内容粘贴到这里..." 
-            class="text-input"
-          ></textarea>
+    <div class="upload-content" :class="{ 'pointer-events-none opacity-40': uploadDisabled }">
+      <div class="header">
+        <div>
+          <h1>开始转换</h1>
+          <p class="subtitle">上传 Markdown 或直接粘贴内容，我们会自动提取图片并放到临时目录。</p>
         </div>
+        <span class="badge">Step 1 / 2</span>
+      </div>
 
-        <!-- 文件上传 -->
-        <div class="method-section">
-          <h3>上传文件 (.txt / .md)</h3>
-          <div class="file-upload-area">
-            <input 
-              type="file" 
-              ref="fileInput" 
-              accept=".txt,.md"
-              @change="handleFileSelect"
-              hidden
-            />
-            <button class="btn-upload" @click="() => $refs.fileInput?.click()">
-              选择文件
-            </button>
-          </div>
-        </div>
+      <div class="tabs">
+        <button
+          class="tab"
+          :class="{ active: activeTab === 'file' }"
+          @click="switchTab('file')"
+        >
+          上传文件
+        </button>
+        <button
+          class="tab"
+          :class="{ active: activeTab === 'text' }"
+          @click="switchTab('text')"
+        >
+          输入 Markdown 文本
+        </button>
+      </div>
 
-        <!-- 文件夹选择 -->
-        <div class="method-section">
-          <h3>选择文件夹</h3>
-          <div class="folder-upload-area">
-            <input 
-              type="file" 
-              ref="folderInput" 
-              webkitdirectory
-              @change="handleFolderSelect"
-              hidden
-            />
-            <button class="btn-upload" @click="() => $refs.folderInput?.click()">
-              选择文件夹
-            </button>
-          </div>
-        </div>
-
-        <!-- 压缩文件 -->
-        <div class="method-section">
-          <h3>上传压缩文件 (.zip / .rar / .7z)</h3>
-          <div class="compress-upload-area">
-            <input 
-              type="file" 
-              ref="compressInput" 
-              accept=".zip,.rar,.7z"
-              @change="handleCompressedFileSelect"
-              hidden
-            />
-            <button class="btn-upload" @click="() => $refs.compressInput?.click()">
-              选择压缩文件
-            </button>
-          </div>
-        </div>
-
-        <!-- 拖拽区域 -->
+      <div v-if="activeTab === 'file'" class="panel">
         <div 
-          class="drag-drop-area"
+          class="drop-area"
           :class="{ active: dragActive }"
           @dragover="handleDragOver"
           @dragleave="handleDragLeave"
           @drop="handleDrop"
+          @click="openFilePicker"
         >
-          <p>或将文件拖放到这里</p>
-          <small>支持 .txt, .md, .zip, .rar, .7z 格式</small>
+          <input
+            type="file"
+            ref="fileInput"
+            class="hidden"
+            :accept="supportedExtensions.join(',')"
+            @change="handleFileSelect"
+          />
+          <div class="drop-icon">⬆</div>
+          <p class="drop-title">点击或拖拽文件到这里</p>
+          <p class="drop-desc">支持 .md / .markdown / .txt / .zip / .7z / .tar.gz / .tar.xz</p>
+          <p class="drop-note">我们会自动扫描 Markdown 并复制引用的图片到临时文件夹。</p>
+        </div>
+
+        <div v-if="selectedFile" class="selected">
+          <div class="file-chip">
+            <span class="file-name">{{ selectedFile.name }}</span>
+            <button class="chip-close" @click.stop="clearSelection">✕</button>
+          </div>
         </div>
       </div>
 
-      <!-- 已选择文件列表 -->
-      <div v-if="files.length > 0" class="selected-files">
-        <h3>已选择文件</h3>
-        <ul>
-          <li v-for="(file, index) in files" :key="index">
-            {{ file.name }}
-          </li>
-        </ul>
-        <button class="btn-clear" @click="clearSelection">清除</button>
+      <div v-else class="panel">
+        <label class="field-label">Markdown 文本</label>
+        <textarea
+          v-model="textContent"
+          class="text-input"
+          placeholder="粘贴你的 Markdown，图片引用会被自动扫描并复制到临时目录。"
+          rows="12"
+        ></textarea>
       </div>
 
-      <!-- 底部按钮 -->
+      <div v-if="prepareError" class="error-box">{{ prepareError }}</div>
+
       <div class="button-group">
-        <button class="btn-next" @click="nextStep">下一步</button>
+        <button class="btn-next" :disabled="uploadDisabled || isPreparing" @click="nextStep">
+          {{ isPreparing ? '正在整理...' : '下一步' }}
+        </button>
       </div>
     </div>
   </div>
@@ -251,178 +286,240 @@ const clearSelection = () => {
 <style scoped>
 .upload-container {
   min-height: 100vh;
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 32px;
+  background: radial-gradient(circle at 20% 20%, #f5f7ff, #eef2ff 40%, #e8edf8 80%);
 }
 
 .upload-content {
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  padding: 40px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 22px 80px rgba(52, 64, 84, 0.14);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-h1 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 30px;
-  font-size: 28px;
+.upload-content:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 90px rgba(52, 64, 84, 0.18);
 }
 
-.upload-methods {
-  margin-bottom: 30px;
-}
-
-.method-section {
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
-.method-section h3 {
-  color: #555;
-  font-size: 16px;
+h1 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 28px;
+  letter-spacing: -0.4px;
+}
+
+.subtitle {
+  margin: 4px 0 0 0;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.badge {
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.tabs {
+  display: inline-flex;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: #f9fafb;
+}
+
+.tab {
+  border: none;
+  padding: 12px 18px;
+  font-weight: 600;
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab.active {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.tab:not(.active):hover {
+  background: #eef2ff;
+}
+
+.panel {
+  border: 1px dashed #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.drop-area {
+  border: 2px dashed #c7d2fe;
+  border-radius: 14px;
+  padding: 32px;
+  text-align: center;
+  background: #fff;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.drop-area.active {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.16);
+}
+
+.drop-icon {
+  font-size: 32px;
+  color: #7c3aed;
   margin-bottom: 10px;
+}
+
+.drop-title {
+  margin: 0;
+  font-weight: 700;
+  color: #111827;
+  font-size: 18px;
+}
+
+.drop-desc {
+  margin: 6px 0;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.drop-note {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.selected {
+  margin-top: 12px;
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.file-name {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-close {
+  border: none;
+  background: #e0e7ff;
+  color: #312e81;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 .text-input {
   width: 100%;
-  height: 120px;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-family: Arial, sans-serif;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
   font-size: 14px;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  background: #fff;
+  color: #111827;
   resize: vertical;
+  min-height: 260px;
 }
 
-.file-upload-area,
-.folder-upload-area,
-.compress-upload-area {
-  margin-bottom: 15px;
-}
-
-.btn-upload {
-  background-color: #667eea;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-.btn-upload:hover {
-  background-color: #5568d3;
-}
-
-.drag-drop-area {
-  border: 2px dashed #ddd;
-  border-radius: 8px;
-  padding: 40px;
-  text-align: center;
-  transition: all 0.3s;
-  cursor: pointer;
-  background-color: #f9f9f9;
-}
-
-.drag-drop-area.active {
-  border-color: #667eea;
-  background-color: #f0f4ff;
-}
-
-.drag-drop-area p {
-  color: #666;
-  margin: 0 0 5px 0;
-}
-
-.drag-drop-area small {
-  color: #999;
-}
-
-.selected-files {
-  background-color: #f0f4ff;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.selected-files h3 {
-  margin-top: 0;
-}
-
-.selected-files ul {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0;
-}
-
-.selected-files li {
-  padding: 8px;
-  background-color: white;
-  border-radius: 4px;
-  margin-bottom: 8px;
-  color: #333;
-}
-
-.btn-clear {
-  background-color: #f56565;
-  color: white;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-clear:hover {
-  background-color: #e53e3e;
+.error-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecdd3;
 }
 
 .button-group {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
   margin-top: 20px;
 }
 
 .btn-next {
-  background-color: #48bb78;
-  color: white;
-  padding: 12px 30px;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  color: #fff;
+  padding: 14px 28px;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  border-radius: 12px;
   font-size: 16px;
-  font-weight: bold;
-  transition: background-color 0.3s;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 12px 30px rgba(34, 197, 94, 0.25);
 }
 
-.btn-next:hover {
-  background-color: #38a169;
+.btn-next:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-/* 移动端适配 */
+.btn-next:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(34, 197, 94, 0.3);
+}
+
 @media (max-width: 768px) {
+  .upload-container {
+    padding: 18px;
+  }
+
   .upload-content {
     padding: 20px;
   }
 
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   h1 {
     font-size: 22px;
-  }
-
-  .drag-drop-area {
-    padding: 20px;
-  }
-
-  .button-group {
-    flex-direction: column;
-  }
-
-  .btn-next {
-    width: 100%;
   }
 }
 </style>

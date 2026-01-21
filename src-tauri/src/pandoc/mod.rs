@@ -1,12 +1,14 @@
 pub mod config;
 pub mod downloader;
 pub mod converter;
+pub mod input;
 
 use tauri::{command, Window, AppHandle};
 
 use config::{PandocConfig, get_pandoc_download_urls, get_crossref_download_urls, get_install_dir};
 use downloader::{download_with_fallback, extract_archive, find_executable_in_dir};
 use converter::{ConvertOptions, convert_md_to_docx, check_pandoc_installed, check_crossref_installed, get_pandoc_version};
+use input::{InputSource, PreparedInput, prepare_input};
 
 #[command]
 pub async fn install_pandoc(window: Window, app_handle: AppHandle) -> Result<String, String> {
@@ -125,4 +127,9 @@ pub fn pandoc_version(app_handle: AppHandle) -> Result<String, String> {
 #[command]
 pub async fn convert_markdown(app_handle: AppHandle, options: ConvertOptions) -> Result<String, String> {
     convert_md_to_docx(&app_handle, options).await
+}
+
+#[command]
+pub async fn prepare_input_payload(app_handle: AppHandle, source: InputSource) -> Result<PreparedInput, String> {
+    prepare_input(&app_handle, source).await
 }

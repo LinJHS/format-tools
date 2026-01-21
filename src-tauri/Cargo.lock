@@ -1109,6 +1109,7 @@ version = "0.1.0"
 dependencies = [
  "flate2",
  "futures",
+ "regex",
  "reqwest 0.13.1",
  "serde",
  "serde_json",

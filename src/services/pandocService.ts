@@ -9,6 +9,24 @@ export interface ConvertOptions {
   use_crossref: boolean
 }
 
+export type InputSourceType = 'file' | 'text'
+
+export interface PrepareInputPayload {
+  source_type: InputSourceType
+  path?: string
+  original_name?: string
+  content?: string
+  suggested_name?: string
+}
+
+export interface PreparedInput {
+  markdown_path: string
+  assets_dir: string
+  image_count: number
+  copied_images: string[]
+  source_name?: string
+}
+
 export interface DownloadProgress {
   downloaded: number
   total: number
@@ -104,5 +122,12 @@ export const pandocService = {
     if (!crossrefInstalled) {
       await this.installCrossref(onCrossrefProgress)
     }
+  },
+
+  /**
+   * 预处理输入，提取 Markdown 及图片到临时目录
+   */
+  async prepareInput(payload: PrepareInputPayload): Promise<PreparedInput> {
+    return await invoke<PreparedInput>('prepare_input_payload', { source: payload })
   }
 }

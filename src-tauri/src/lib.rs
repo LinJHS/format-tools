@@ -2,7 +2,7 @@ mod pandoc;
 
 use pandoc::{
     install_pandoc, install_crossref, is_pandoc_installed, 
-    is_crossref_installed, pandoc_version, convert_markdown
+    is_crossref_installed, pandoc_version, convert_markdown, prepare_input_payload
 };
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -22,7 +22,8 @@ pub fn run() {
             is_pandoc_installed,
             is_crossref_installed,
             pandoc_version,
-            convert_markdown
+            convert_markdown,
+            prepare_input_payload
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
