@@ -27,6 +27,11 @@ export interface PreparedInput {
   source_name?: string
 }
 
+export interface TemplateInfo {
+  reference_doc: string
+  protected_path: string
+}
+
 export interface DownloadProgress {
   downloaded: number
   total: number
