@@ -84,7 +84,7 @@ pub struct TemplateMeta {
     pub isPro: Option<bool>,
 }
 
-pub fn list_templates(app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, String> {
+pub fn list_templates(_app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, String> {
     // Locate templates metadata file in resources/templates/templates.json
     let metadata_candidates = [
         // exe dir resources
