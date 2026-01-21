@@ -286,7 +286,7 @@ const nextStep = async () => {
 </script>
 
 <template>
-<div class="min-h-[calc(100vh-56px)] p-6 bg-[radial-gradient(circle_at_20%_20%,_#f5f7ff,_#eef2ff_40%,_#e8edf8_80%)]">
+<div class="min-h-[calc(100vh-56px)] p-6 bg-[radial-gradient(circle_at_20%_20%,#f5f7ff,#eef2ff_40%,#e8edf8_80%)]">
     <!-- 下载进度弹窗 -->
     <DownloadProgress 
       :is-visible="isInstalling"
@@ -309,8 +309,8 @@ const nextStep = async () => {
       </div>
 
       <div class="inline-flex border border-[#e5e7eb] rounded-xl overflow-hidden mb-4 bg-[#f9fafb]">
-        <button class="border-none px-4 py-2 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'file' }" @click="switchTab('file')">上传文件</button>
-        <button class="border-none px-4 py-2 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'text' }" @click="switchTab('text')">输入 Markdown 文本</button>
+        <button class="border-none px-4 py-2 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,#6366f1,#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'file' }" @click="switchTab('file')">上传文件</button>
+        <button class="border-none px-4 py-2 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,#6366f1,#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'text' }" @click="switchTab('text')">输入 Markdown 文本</button>
       </div>
 
       <div v-if="activeTab === 'file'" class="border border-dashed border-[#e5e7eb] rounded-xl p-4 bg-[#f8fafc] flex flex-col min-h-61">
@@ -331,19 +331,19 @@ const nextStep = async () => {
 
         <div v-if="selectedFile" class="mt-1 flex flex-1 items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#eef2ff] text-[#1f2937]">
           <span class="truncate text-m font-semibold">{{ selectedFile.name }}</span>
-          <button class="border-none bg-[#e0e7ff] text-[#312e81] rounded-full w-5 h-5 cursor-pointer font-bold text-xs flex items-center justify-center flex-shrink-0" @click.stop="clearSelection">✕</button>
+          <button class="border-none bg-[#e0e7ff] text-[#312e81] rounded-full w-5 h-5 cursor-pointer font-bold text-xs flex items-center justify-center shrink-0" @click.stop="clearSelection">✕</button>
         </div>
       </div>
 
       <div v-else class="border border-dashed border-[#e5e7eb] rounded-xl p-5 bg-[#f8fafc]">
         <label class="block mb-2 font-bold text-[#1f2937]">Markdown 文本</label>
-        <textarea v-model="textContent" class="w-full border border-[#e5e7eb] rounded-xl p-3.5 text-sm font-mono bg-white text-[#111827] resize-y min-h-[260px]" placeholder="粘贴你的 Markdown，图片引用会被自动扫描并复制到临时目录。" rows="12"></textarea>
+        <textarea v-model="textContent" class="w-full border border-[#e5e7eb] rounded-xl p-3.5 text-sm font-mono bg-white text-[#111827] resize-y min-h-65" placeholder="粘贴你的 Markdown，图片引用会被自动扫描并复制到临时目录。" rows="12"></textarea>
       </div>
 
       <div v-if="prepareError" class="mt-3 px-3.5 py-3 rounded-xl bg-[#fef2f2] text-[#b91c1c] border border-[#fecdd3]">{{ prepareError }}</div>
 
       <div class="flex justify-end mt-5">
-        <button class="bg-[linear-gradient(90deg,_#22c55e,_#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="uploadDisabled || isPreparing" @click="nextStep">
+        <button class="bg-[linear-gradient(90deg,#22c55e,#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="uploadDisabled || isPreparing" @click="nextStep">
           {{ isPreparing ? '正在整理...' : '下一步' }}
         </button>
       </div>
@@ -367,7 +367,7 @@ const nextStep = async () => {
 
       <div class="flex gap-3 justify-end">
         <button class="px-5 py-2 rounded-lg text-sm font-semibold text-[#6b7280] bg-[#f3f4f6] cursor-pointer transition-all hover:bg-[#e5e7eb]" @click="showMdSelectionDialog = false">取消</button>
-        <button class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-[linear-gradient(90deg,_#22c55e,_#16a34a)] cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)]" @click="confirmMdSelection">确认</button>
+        <button class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-[linear-gradient(90deg,#22c55e,#16a34a)] cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)]" @click="confirmMdSelection">确认</button>
       </div>
     </div>
   </div>

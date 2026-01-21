@@ -119,7 +119,7 @@ const templatesByCategory = computed(() => {
 
     <section class="opacity-60 max-w-6xl mx-auto mb-8">
       <h2 class="text-lg font-bold text-[#1f2937] m-0 mb-4">高级模板</h2>
-      <div class="bg-[linear-gradient(135deg,_#f5f7ff,_#ede9fe)] border-2 border-dashed border-[#c7d2fe] rounded-2xl p-10 text-center text-[#7c3aed]">
+      <div class="bg-[linear-gradient(135deg,#f5f7ff,#ede9fe)] border-2 border-dashed border-[#c7d2fe] rounded-2xl p-10 text-center text-[#7c3aed]">
         <div class="text-5xl mb-3">🚀</div>
         <p class="m-0 font-semibold">敬请期待更多专业模板</p>
         <p class="m-0 mt-1 text-[#a78bfa] text-xs">登录后可解锁高级模板</p>
@@ -136,7 +136,7 @@ const templatesByCategory = computed(() => {
         </div>
         <div class="flex gap-3">
           <button class="bg-[#e5e7eb] text-[#374151] px-6 py-3 rounded-xl text-base font-bold cursor-pointer transition-all hover:bg-[#d1d5db]" @click="goBack">上一步</button>
-          <button class="bg-[linear-gradient(90deg,_#22c55e,_#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="!selectedTemplate || isLoading" @click="convertMarkdown">
+          <button class="bg-[linear-gradient(90deg,#22c55e,#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="!selectedTemplate || isLoading" @click="convertMarkdown">
             {{ isLoading ? '转换中...' : '开始转换' }}
           </button>
         </div>

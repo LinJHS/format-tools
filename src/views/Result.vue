@@ -83,13 +83,13 @@ const openFolder = async () => {
         </button>
         <div class="flex gap-3">
           <button 
-            class="px-6 py-2.5 rounded-lg text-sm font-bold text-white cursor-pointer transition-all shadow-[0_12px_30px_rgba(59,130,246,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(59,130,246,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none bg-[linear-gradient(90deg,_#3b82f6,_#2563eb)]"
+            class="px-6 py-2.5 rounded-lg text-sm font-bold text-white cursor-pointer transition-all shadow-[0_12px_30px_rgba(59,130,246,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(59,130,246,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none bg-[linear-gradient(90deg,#3b82f6,#2563eb)]"
             @click="openFile"
           >
             打开文件
           </button>
           <button 
-            class="px-6 py-2.5 rounded-lg text-sm font-bold text-white cursor-pointer transition-all shadow-[0_12px_30px_rgba(168,85,247,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(168,85,247,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none bg-[linear-gradient(90deg,_#a855f7,_#9333ea)]"
+            class="px-6 py-2.5 rounded-lg text-sm font-bold text-white cursor-pointer transition-all shadow-[0_12px_30px_rgba(168,85,247,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(168,85,247,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none bg-[linear-gradient(90deg,#a855f7,#9333ea)]"
             @click="openFolder"
           >
             打开文件夹
