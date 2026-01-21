@@ -15,10 +15,16 @@ const isInstalling = ref(false)
 const installTitle = ref('正在准备必要组件')
 const installDetail = ref('')
 const downloadProgress = ref({ downloaded: 0, total: 0, percentage: 0 })
+const installError = ref('')
+const isError = ref(false)
+const uploadDisabled = ref(false) // 禁用上传功能
 
-// 检查并安装 Pandoc
-onMounted(async () => {
+const installDependencies = async () => {
   try {
+    isError.value = false
+    installError.value = ''
+    uploadDisabled.value = false
+
     const pandocInstalled = await pandocService.isPandocInstalled()
     if (!pandocInstalled) {
       isInstalling.value = true
@@ -44,10 +50,27 @@ onMounted(async () => {
     installDetail.value = ''
   } catch (error) {
     console.error('安装失败:', error)
-    const detail = installDetail.value || '组件'
-    alert(`下载失败：${detail}。请检查网络连接或稍后重试。`)
-    isInstalling.value = false
+    isInstalling.value = true
+    isError.value = true
+    installTitle.value = '组件下载失败'
+    installError.value = installDetail.value || '组件下载失败，请检查网络连接后重试。'
+    uploadDisabled.value = true
   }
+}
+
+// 重试下载
+const handleRetry = () => {
+  installDependencies()
+}
+
+// 返回首页
+const handleGoHome = () => {
+  router.push('/')
+}
+
+// 检查并安装 Pandoc
+onMounted(() => {
+  installDependencies()
 })
 
 const handleDragOver = (e: DragEvent) => {
@@ -99,6 +122,9 @@ const handleCompressedFileSelect = (e: Event) => {
 }
 
 const nextStep = () => {
+  if (uploadDisabled.value) {
+    return
+  }
   if (files.value.length > 0 || uploadMethod.value === 'text') {
     uploadStore.addFiles(files.value)
     uploadStore.setStep(2)
@@ -120,9 +146,13 @@ const clearSelection = () => {
       :title="installTitle"
       :detail="installDetail"
       :progress="downloadProgress"
+      :is-error="isError"
+      :error-message="installError"
+      @retry="handleRetry"
+      @go-home="handleGoHome"
     />
     
-    <div class="upload-content">
+    <div class="upload-content" :class="{ 'pointer-events-none opacity-50': uploadDisabled }">
       <h1>开始转换</h1>
       
       <div class="upload-methods">

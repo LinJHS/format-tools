@@ -86,13 +86,11 @@ pub async fn extract_archive(archive_path: &Path, extract_to: &Path) -> Result<(
     let archive_path_str = archive_path.to_str().unwrap();
     
     if archive_path_str.ends_with(".zip") {
-        extract_zip(archive_path, extract_to)?;
+        extract_zip(archive_path, extract_to)?
     } else if archive_path_str.ends_with(".tar.gz") {
-        extract_tar_gz(archive_path, extract_to)?;
+        extract_tar_gz(archive_path, extract_to)?
     } else if archive_path_str.ends_with(".tar.xz") {
-        // 简化处理：如果是 tar.xz，先尝试用 tar.gz 的方式
-        // 实际上需要 xz2 crate
-        return Err("tar.xz format not fully supported yet".to_string());
+        extract_tar_xz(archive_path, extract_to)?
     } else if archive_path_str.ends_with(".7z") {
         return Err("7z format not supported, please extract manually".to_string());
     }
@@ -146,7 +144,18 @@ fn extract_tar_gz(archive_path: &Path, extract_to: &Path) -> Result<(), String> 
     Ok(())
 }
 
-// 移除未使用的 extract_tar_xz 函数
+fn extract_tar_xz(archive_path: &Path, extract_to: &Path) -> Result<(), String> {
+    let xz_file = File::open(archive_path)
+        .map_err(|e| format!("Failed to open archive: {}", e))?;
+    
+    let tar = xz2::read::XzDecoder::new(xz_file);
+    let mut archive = tar::Archive::new(tar);
+    
+    archive.unpack(extract_to)
+        .map_err(|e| format!("Failed to extract tar.xz: {}", e))?;
+    
+    Ok(())
+}
 
 pub fn find_executable_in_dir(dir: &Path, exe_name: &str) -> Option<std::path::PathBuf> {
     // 递归查找可执行文件
