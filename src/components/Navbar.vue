@@ -9,7 +9,7 @@ const navigateTo = (path: string) => {
 </script>
 
 <template>
-  <nav class="bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg">
+  <nav class="bg-linear-to-r from-purple-600 to-indigo-600 shadow-lg">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-14">
         <div class="flex items-center">

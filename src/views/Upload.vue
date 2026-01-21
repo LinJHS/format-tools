@@ -309,13 +309,13 @@ const nextStep = async () => {
       </div>
 
       <div class="inline-flex border border-[#e5e7eb] rounded-xl overflow-hidden mb-4 bg-[#f9fafb]">
-        <button class="border-none px-4 py-3 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'file' }" @click="switchTab('file')">上传文件</button>
-        <button class="border-none px-4 py-3 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'text' }" @click="switchTab('text')">输入 Markdown 文本</button>
+        <button class="border-none px-4 py-2 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'file' }" @click="switchTab('file')">上传文件</button>
+        <button class="border-none px-4 py-2 font-semibold bg-transparent text-[#4b5563] cursor-pointer transition-all" :class="{ 'bg-[linear-gradient(90deg,_#6366f1,_#8b5cf6)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]': activeTab === 'text' }" @click="switchTab('text')">输入 Markdown 文本</button>
       </div>
 
-      <div v-if="activeTab === 'file'" class="border border-dashed border-[#e5e7eb] rounded-xl p-5 bg-[#f8fafc]">
+      <div v-if="activeTab === 'file'" class="border border-dashed border-[#e5e7eb] rounded-xl p-4 bg-[#f8fafc] flex flex-col min-h-61">
         <div 
-          class="border-2 border-dashed border-[#c7d2fe] rounded-xl p-8 text-center bg-white transition-all cursor-pointer"
+          class="border-2 border-dashed border-[#c7d2fe] rounded-xl p-6 text-center bg-white transition-all cursor-pointer flex-1 flex flex-col justify-center"
           :class="{ 'border-[#7c3aed] bg-[#f5f3ff] shadow-[0_10px_30px_rgba(124,58,237,0.16)]': dragActive }"
           @dragover="handleDragOver"
           @dragleave="handleDragLeave"
@@ -323,14 +323,14 @@ const nextStep = async () => {
           @click="openFilePicker"
         >
           <input type="file" ref="fileInput" class="hidden" :accept="supportedExtensions.join(',')" @change="handleFileSelect" />
-          <div class="text-3xl text-[#7c3aed] mb-2">⬆</div>
+          <div class="text-3xl text-[#7c3aed] mb-1">⬆</div>
           <p class="m-0 font-bold text-[#111827] text-lg">点击或拖拽文件到这里</p>
           <p class="m-0 mt-1 text-[#4b5563] text-sm">支持 .md / .markdown / .txt / .zip / .7z / .tar.gz / .tar.xz</p>
           <p class="m-0 mt-1 text-[#6b7280] text-xs">一切数据将全部在本地处理，确保您的隐私。</p>
         </div>
 
-        <div v-if="selectedFile" class="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#eef2ff] text-[#1f2937] w-full">
-          <span class="truncate text-sm font-semibold">{{ selectedFile.name }}</span>
+        <div v-if="selectedFile" class="mt-1 flex flex-1 items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#eef2ff] text-[#1f2937]">
+          <span class="truncate text-m font-semibold">{{ selectedFile.name }}</span>
           <button class="border-none bg-[#e0e7ff] text-[#312e81] rounded-full w-5 h-5 cursor-pointer font-bold text-xs flex items-center justify-center flex-shrink-0" @click.stop="clearSelection">✕</button>
         </div>
       </div>

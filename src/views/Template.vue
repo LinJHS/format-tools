@@ -83,7 +83,7 @@ const templatesByCategory = computed(() => {
 </script>
 
 <template>
-  <div class="p-6 pb-28 bg-[radial-gradient(circle_at_20%_20%,_#f5f7ff,_#eef2ff_40%,_#e8edf8_80%)]">
+  <div class="p-6 pb-28 bg-[radial-gradient(circle_at_20%_20%,#f5f7ff,#eef2ff_40%,#e8edf8_80%)]">
     <div class="max-w-6xl mx-auto mb-7 flex items-center justify-between gap-4">
       <div>
         <h1 class="m-0 text-[#1f2937] text-2xl tracking-tight">选择模板</h1>
@@ -94,7 +94,7 @@ const templatesByCategory = computed(() => {
 
     <section class="max-w-6xl mx-auto mb-8">
       <h2 class="text-lg font-bold text-[#1f2937] m-0 mb-4">免费模板</h2>
-      <div class="grid [grid-template-columns:repeat(auto-fill,_minmax(280px,_1fr))] gap-4">
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         <div
           v-for="template in templatesByCategory"
           :key="template.id"

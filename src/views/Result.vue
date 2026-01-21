@@ -46,7 +46,7 @@ const openFolder = async () => {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-56px)] p-6 bg-[radial-gradient(circle_at_20%_20%,_#f5f7ff,_#eef2ff_40%,_#e8edf8_80%)]">
+  <div class="min-h-[calc(100vh-56px)] p-6 bg-[radial-gradient(circle_at_20%_20%,#f5f7ff,#eef2ff_40%,#e8edf8_80%)]">
     <div class="max-w-3xl mx-auto bg-white rounded-2xl p-8 shadow-[0_22px_80px_rgba(52,64,84,0.14)]">
       <!-- 头部 -->
       <div class="flex items-center justify-between gap-4 mb-8">
