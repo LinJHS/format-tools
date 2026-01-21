@@ -92,7 +92,9 @@ pub async fn extract_archive(archive_path: &Path, extract_to: &Path) -> Result<(
     } else if archive_path_str.ends_with(".tar.xz") {
         extract_tar_xz(archive_path, extract_to)?
     } else if archive_path_str.ends_with(".7z") {
-        return Err("7z format not supported, please extract manually".to_string());
+        extract_7z(archive_path, extract_to)?
+    } else {
+        return Err(format!("Unsupported archive format for file: {}", archive_path_str));
     }
     
     Ok(())
@@ -157,6 +159,15 @@ fn extract_tar_xz(archive_path: &Path, extract_to: &Path) -> Result<(), String> 
     Ok(())
 }
 
+fn extract_7z(archive_path: &Path, extract_to: &Path) -> Result<(), String> {
+    fs::create_dir_all(extract_to)
+        .map_err(|e| format!("Failed to create extract directory: {}", e))?;
+    
+    sevenz_rust::decompress_file(archive_path, extract_to)
+        .map_err(|e| format!("Failed to extract 7z archive: {}", e))?;
+    
+    Ok(())
+}
 pub fn find_executable_in_dir(dir: &Path, exe_name: &str) -> Option<std::path::PathBuf> {
     // 递归查找可执行文件
     if let Ok(entries) = fs::read_dir(dir) {

@@ -85,7 +85,7 @@ const goToRegister = () => {
     </section>
 
     <!-- Login Notice for Non-logged Users -->
-    <section v-if="!isLoggedIn" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 max-w-4xl mx-auto mt-6 rounded-r-lg">
+    <section v-if="!isLoggedIn" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 max-w-4xl mx-auto rounded-r-lg">
       <div class="flex items-start">
         <div class="flex-shrink-0">
           <svg class="h-6 w-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
