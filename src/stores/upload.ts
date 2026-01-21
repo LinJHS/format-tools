@@ -8,6 +8,7 @@ export const useUploadStore = defineStore('upload', () => {
   const mode = ref<'file' | 'text'>('file')
   const markdownText = ref('')
   const preparedInput = ref<any>(null)
+  const outputPath = ref<string>('')
 
   const addFiles = (newFiles: File[]) => {
     files.value = newFiles
@@ -29,6 +30,10 @@ export const useUploadStore = defineStore('upload', () => {
     preparedInput.value = payload
   }
 
+  const setOutputPath = (path: string) => {
+    outputPath.value = path
+  }
+
   const setStep = (step: number) => {
     currentStep.value = step
   }
@@ -40,11 +45,13 @@ export const useUploadStore = defineStore('upload', () => {
     mode,
     markdownText,
     preparedInput,
+    outputPath,
     addFiles,
     clearFiles,
     setMode,
     setMarkdownText,
     setPreparedInput,
+    setOutputPath,
     setStep
   }
 })

@@ -28,6 +28,7 @@ pub struct PreparedInput {
     pub image_count: usize,
     pub copied_images: Vec<String>,
     pub source_name: Option<String>,
+    pub source_dir: Option<String>,
 }
 
 pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Result<PreparedInput, String> {
@@ -54,6 +55,7 @@ pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Resul
                 image_count: copied_images.len(),
                 copied_images,
                 source_name: file_name,
+                source_dir: input_path.parent().map(|p| p.to_string_lossy().to_string()),
             })
         }
         InputSource::Text { content, suggested_name } => {
@@ -67,6 +69,7 @@ pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Resul
                 image_count: copied_images.len(),
                 copied_images,
                 source_name: suggested_name,
+                source_dir: None,
             })
         }
     }

@@ -3,7 +3,9 @@ import { listen } from '@tauri-apps/api/event'
 
 export interface ConvertOptions {
   input_file: string
-  output_file: string
+  output_file?: string
+  source_dir?: string
+  source_name?: string
   reference_doc?: string
   metadata_file?: string
   use_crossref: boolean
@@ -25,6 +27,7 @@ export interface PreparedInput {
   image_count: number
   copied_images: string[]
   source_name?: string
+  source_dir?: string
 }
 
 export interface TemplateInfo {
@@ -153,7 +156,7 @@ export const pandocService = {
   async prepareTemplate(templateName: string): Promise<TemplateInfo> {
     // Tauri v2 maps snake_case to camelCase in command args; Rust expects `templateName`.
     return await invoke<TemplateInfo>('prepare_template_protected', { templateName })
-  }
+  },
 
   /**
    * 获取模板列表元数据

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
 import { pandocService, PreparedInput, PrepareInputPayload } from '../services/pandocService'
@@ -22,6 +22,11 @@ const isError = ref(false)
 const uploadDisabled = ref(false)
 const isPreparing = ref(false)
 const prepareError = ref('')
+const showMdSelectionDialog = ref(false)
+const pendingMarkdownFiles = ref<string[]>([])
+const selectedMdFile = ref<string>('')
+const pendingPreparedInput = ref<PreparedInput | null>(null)
+const unlistenDragDrop = ref<(() => void) | null>(null)
 
 const supportedExtensions = ['.md', '.markdown', '.txt', '.zip', '.7z', '.tar.gz', '.tar.xz']
 
@@ -78,7 +83,7 @@ const setupFileDropListener = async () => {
     const { getCurrentWindow } = await import('@tauri-apps/api/window')
     const window = getCurrentWindow()
     
-    const unlisten = await window.onDragDropEvent((event) => {
+    unlistenDragDrop.value = await window.onDragDropEvent((event) => {
       if (event.payload.type === 'over') {
         // 用户正在拖拽悬停
         dragActive.value = true
@@ -117,9 +122,6 @@ const setupFileDropListener = async () => {
         dragActive.value = false
       }
     })
-    
-    // 注意: 如果组件卸载需要调用 unlisten()
-    // 这里暂不处理，因为这是主要页面
   } catch (error) {
     console.warn('无法设置拖拽监听器:', error)
   }
@@ -128,6 +130,12 @@ const setupFileDropListener = async () => {
 onMounted(() => {
   installDependencies()
   setupFileDropListener()
+})
+
+onBeforeUnmount(() => {
+  if (unlistenDragDrop.value) {
+    unlistenDragDrop.value()
+  }
 })
 
 const isSupportedFile = (fileName: string) => {
@@ -187,6 +195,21 @@ const switchTab = (tab: 'file' | 'text') => {
   prepareError.value = ''
 }
 
+const confirmMdSelection = async () => {
+  showMdSelectionDialog.value = false
+  if (!selectedMdFile.value || !pendingPreparedInput.value) {
+    prepareError.value = '请选择一个 Markdown 文件'
+    return
+  }
+
+  uploadStore.setMode(activeTab.value)
+  uploadStore.addFiles(selectedFile.value ? [selectedFile.value] : [])
+  uploadStore.setMarkdownText(textContent.value)
+  uploadStore.setPreparedInput(pendingPreparedInput.value)
+  uploadStore.setStep(2)
+  router.push('/template')
+}
+
 const buildPayload = (): PrepareInputPayload | null => {
   if (activeTab.value === 'file') {
     if (!selectedFile.value) {
@@ -227,9 +250,25 @@ const nextStep = async () => {
   const payload = buildPayload()
   if (!payload) return
 
+  const fileName = selectedFile.value?.name || ''
+  const isArchive = /\.(zip|7z|tar\.gz|tar\.xz)$/i.test(fileName)
+
   try {
     isPreparing.value = true
     const prepared: PreparedInput = await pandocService.prepareInput(payload)
+
+    if (activeTab.value === 'file' && isArchive) {
+      const mdFiles = prepared.copied_images.filter(img => /\.md$/i.test(img))
+      
+      if (mdFiles.length > 1) {
+        pendingMarkdownFiles.value = mdFiles
+        selectedMdFile.value = mdFiles[0]
+        pendingPreparedInput.value = prepared
+        showMdSelectionDialog.value = true
+        isPreparing.value = false
+        return
+      }
+    }
 
     uploadStore.setMode(activeTab.value)
     uploadStore.addFiles(selectedFile.value ? [selectedFile.value] : [])
@@ -247,7 +286,7 @@ const nextStep = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen p-8 bg-[radial-gradient(circle_at_20%_20%,_#f5f7ff,_#eef2ff_40%,_#e8edf8_80%)]">
+<div class="min-h-[calc(100vh-56px)] p-6 bg-[radial-gradient(circle_at_20%_20%,_#f5f7ff,_#eef2ff_40%,_#e8edf8_80%)]">
     <!-- 下载进度弹窗 -->
     <DownloadProgress 
       :is-visible="isInstalling"
@@ -260,11 +299,11 @@ const nextStep = async () => {
       @go-home="handleGoHome"
     />
 
-    <div class="max-w-3xl mx-auto bg-white rounded-2xl p-8 shadow-[0_22px_80px_rgba(52,64,84,0.14)] transition-all hover:-translate-y-0.5 hover:shadow-[0_26px_90px_rgba(52,64,84,0.18)]" :class="{ 'pointer-events-none opacity-40': uploadDisabled }">
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl p-6 shadow-[0_22px_80px_rgba(52,64,84,0.14)] hover:shadow-[0_26px_90px_rgba(52,64,84,0.18)]" :class="{ 'pointer-events-none opacity-40': uploadDisabled }">
       <div class="flex items-center justify-between gap-4 mb-5">
         <div>
           <h1 class="m-0 text-[#1f2937] text-2xl tracking-tight">开始转换</h1>
-          <p class="m-0 mt-1 text-[#4b5563] text-sm">上传 Markdown 或直接粘贴内容，我们会自动提取图片并放到临时目录。</p>
+          <p class="m-0 mt-1 text-[#4b5563] text-sm">上传 Markdown 或直接粘贴内容。</p>
         </div>
         <span class="bg-[#e0e7ff] text-[#3730a3] px-3 py-2 rounded-xl font-semibold text-xs">Step 1 / 2</span>
       </div>
@@ -287,14 +326,12 @@ const nextStep = async () => {
           <div class="text-3xl text-[#7c3aed] mb-2">⬆</div>
           <p class="m-0 font-bold text-[#111827] text-lg">点击或拖拽文件到这里</p>
           <p class="m-0 mt-1 text-[#4b5563] text-sm">支持 .md / .markdown / .txt / .zip / .7z / .tar.gz / .tar.xz</p>
-          <p class="m-0 mt-1 text-[#6b7280] text-xs">我们会自动扫描 Markdown 并复制引用的图片到临时文件夹。</p>
+          <p class="m-0 mt-1 text-[#6b7280] text-xs">一切数据将全部在本地处理，确保您的隐私。</p>
         </div>
 
-        <div v-if="selectedFile" class="mt-3">
-          <div class="inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#eef2ff] text-[#1f2937] font-bold">
-            <span class="max-w-[420px] overflow-hidden text-ellipsis whitespace-nowrap">{{ selectedFile.name }}</span>
-            <button class="border-none bg-[#e0e7ff] text-[#312e81] rounded-full w-6 h-6 cursor-pointer font-bold" @click.stop="clearSelection">✕</button>
-          </div>
+        <div v-if="selectedFile" class="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#eef2ff] text-[#1f2937] w-full">
+          <span class="truncate text-sm font-semibold">{{ selectedFile.name }}</span>
+          <button class="border-none bg-[#e0e7ff] text-[#312e81] rounded-full w-5 h-5 cursor-pointer font-bold text-xs flex items-center justify-center flex-shrink-0" @click.stop="clearSelection">✕</button>
         </div>
       </div>
 
@@ -309,6 +346,28 @@ const nextStep = async () => {
         <button class="bg-[linear-gradient(90deg,_#22c55e,_#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="uploadDisabled || isPreparing" @click="nextStep">
           {{ isPreparing ? '正在整理...' : '下一步' }}
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MD 文件选择对话框 -->
+  <div v-if="showMdSelectionDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-6 shadow-[0_25px_50px_rgba(0,0,0,0.25)] max-w-sm w-11/12">
+      <h2 class="m-0 text-[#1f2937] text-xl font-bold mb-4">选择 Markdown 文件</h2>
+      <p class="m-0 text-[#6b7280] text-sm mb-4">压缩包中找到 {{ pendingMarkdownFiles.length }} 个 Markdown 文件，请选择要转换的文件：</p>
+      
+      <div class="mb-6 border border-[#e5e7eb] rounded-xl overflow-hidden bg-[#f9fafb] max-h-64 overflow-y-auto">
+        <div v-for="(mdFile, idx) in pendingMarkdownFiles" :key="idx" class="p-3 border-b border-[#e5e7eb] last:border-b-0 cursor-pointer hover:bg-[#f3f4f6] transition-all" :class="{ 'bg-[#eef2ff] border-l-4 border-l-[#6366f1]': selectedMdFile === mdFile }" @click="selectedMdFile = mdFile">
+          <div class="flex items-center gap-2">
+            <input type="radio" :checked="selectedMdFile === mdFile" class="cursor-pointer" />
+            <span class="text-sm text-[#111827] font-medium truncate">{{ mdFile.split(/[\\/]/).pop() }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-3 justify-end">
+        <button class="px-5 py-2 rounded-lg text-sm font-semibold text-[#6b7280] bg-[#f3f4f6] cursor-pointer transition-all hover:bg-[#e5e7eb]" @click="showMdSelectionDialog = false">取消</button>
+        <button class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-[linear-gradient(90deg,_#22c55e,_#16a34a)] cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)]" @click="confirmMdSelection">确认</button>
       </div>
     </div>
   </div>
