@@ -65,7 +65,7 @@ function getFieldHelp(field: string): OptionHelp {
     abstract: {
       title: '摘要',
       description: '文档内容的简短摘要，适合学术论文。',
-      example: '本文提出了一种基于深度学习的图像识别方法...',
+      example: '本文提出了一种基于某算法的某方法...',
       affectedFields: ['abstract'],
       preview: '摘要: 本文提出了一种...'
     }
