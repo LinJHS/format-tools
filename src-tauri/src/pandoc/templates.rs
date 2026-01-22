@@ -72,6 +72,7 @@ fn find_template_resource(template_name: &str) -> Result<PathBuf, String> {
     Err(format!("Template '{}' not found in resources", template_name))
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateMeta {
     pub id: String,
@@ -82,6 +83,9 @@ pub struct TemplateMeta {
     pub tags: Option<Vec<String>>,
     pub isFree: Option<bool>,
     pub isPro: Option<bool>,
+}
+
+#[allow(non_snake_case)]
 }
 
 pub fn list_templates(_app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, String> {

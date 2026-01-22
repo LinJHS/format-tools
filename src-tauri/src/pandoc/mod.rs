@@ -136,6 +136,7 @@ pub async fn prepare_input_payload(app_handle: AppHandle, source: InputSource) -
     prepare_input(&app_handle, source).await
 }
 
+#[allow(non_snake_case)]
 #[command]
 pub fn prepare_template_protected(app_handle: AppHandle, templateName: String) -> Result<TemplateInfo, String> {
     // Tauri v2 expects camelCase param names; use `templateName` here
