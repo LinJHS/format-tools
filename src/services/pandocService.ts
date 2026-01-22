@@ -7,6 +7,7 @@ export interface ConvertOptions {
   source_dir?: string
   source_name?: string
   reference_doc?: string
+  metadata?: Record<string, any>  // Pandoc 元数据对象
   metadata_file?: string
   use_crossref: boolean
 }
@@ -35,6 +36,8 @@ export interface TemplateInfo {
   protected_path: string
 }
 
+import type { TemplateConfig } from '../types/templateConfig'
+
 export interface TemplateMeta {
   id: string
   name: string
@@ -44,6 +47,7 @@ export interface TemplateMeta {
   tags?: string[]
   isFree?: boolean
   isPro?: boolean
+  defaultPreset?: Partial<TemplateConfig>
 }
 
 export interface DownloadProgress {

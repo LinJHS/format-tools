@@ -7,9 +7,19 @@
       "description": "简洁专业的 Word 模板，适合大多数场景。",
       "icon": "📄",
       "category": "free",
-      "tags": ["docx", "default"],
+      "tags": [
+        "docx",
+        "default"
+      ],
       "isFree": true,
-      "isPro": false
+      "isPro": false,
+      "defaultPreset": {
+        "languageStyle": "zh-academic",
+        "sectionNumbering": "none",
+        "crossReference": "basic",
+        "equationNumbering": "manual",
+        "codeBlock": "normal"
+      }
     }
   ]
 }
