@@ -254,13 +254,6 @@ const handlePresetDialogClose = () => {
           >
             配置选项
           </button>
-          <button 
-            v-if="selectedTemplate" 
-            class="bg-[#8b5cf6] text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all hover:bg-[#7c3aed]" 
-            @click="presetDialogMode = 'load'; presetDialogVisible = true"
-          >
-            预设
-          </button>
           <button class="bg-[linear-gradient(90deg,#22c55e,#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="!selectedTemplate || isLoading" @click="convertMarkdown">
             {{ isLoading ? '转换中...' : '开始转换' }}
           </button>

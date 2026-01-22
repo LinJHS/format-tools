@@ -4,7 +4,12 @@
       <div class="config-dialog" @click.stop>
         <div class="dialog-header">
           <h3>配置选项</h3>
-          <button class="close-btn" @click="close">&times;</button>
+          <div class="header-actions">
+            <button class="preset-btn" @click="loadPreset">加载预设</button>
+            <button class="preset-btn" @click="saveAsPreset">保存预设</button>
+            <button class="preset-btn" @click="resetToTemplate">重置</button>
+            <button class="close-btn" @click="close">&times;</button>
+          </div>
         </div>
         
         <div class="dialog-body">
@@ -260,22 +265,6 @@
               </div>
             </div>
           </div>
-          
-          <!-- 预设管理 -->
-          <div class="config-section">
-            <h4>预设管理</h4>
-            <div class="preset-actions">
-              <button @click="loadPreset" class="btn-secondary">
-                加载预设
-              </button>
-              <button @click="saveAsPreset" class="btn-secondary">
-                保存为预设
-              </button>
-              <button @click="resetToTemplate" class="btn-secondary">
-                重置为模板默认
-              </button>
-            </div>
-          </div>
         </div>
         
         <div class="dialog-footer">
@@ -402,7 +391,29 @@ function resetToTemplate() {
   color: #1f2937;
   font-weight: 600;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
+.preset-btn {
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #1f2937;
+}
 .close-btn {
   background: none;
   border: none;
@@ -534,33 +545,6 @@ textarea {
 .radio-option:has(input[type="radio"]:checked) {
   border-color: #4CAF50;
   background: #f0fdf4;
-}
-
-.preset-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-secondary {
-  padding: 7px 14px;
-  background: #f9fafb;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
-}
-
-.btn-secondary:active {
-  background: #e5e7eb;
 }
 
 .dialog-footer {
