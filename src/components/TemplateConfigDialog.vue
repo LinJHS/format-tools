@@ -280,11 +280,6 @@ const emit = defineEmits<Emits>()
 
 const localConfig = ref<Partial<TemplateConfig>>({ ...props.config })
 
-// 初始化默认值
-if (!localConfig.value.date) {
-  localConfig.value.date = new Date().toISOString().split('T')[0]
-}
-
 // 初始化自定义章节配置
 if (!localConfig.value.customSectionConfig) {
   localConfig.value.customSectionConfig = { startLevel: 1, depth: 3 }

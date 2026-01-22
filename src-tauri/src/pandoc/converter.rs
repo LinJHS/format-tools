@@ -4,6 +4,7 @@ use std::process::Command;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use serde_yaml::{Mapping as YamlMapping, Value as YamlValue};
 use tauri::{AppHandle, Manager};
 
 use super::config::{get_pandoc_executable_path, get_crossref_executable_path};
@@ -183,60 +184,58 @@ fn inject_metadata_to_markdown(file_path: &str, metadata: &Value) -> Result<(), 
     // 读取原始 Markdown 内容
     let content = fs::read_to_string(file_path)
         .map_err(|e| format!("Failed to read markdown file: {}", e))?;
-    
-    // 检查是否已有 YAML frontmatter
-    let has_frontmatter = content.starts_with("---");
-    
-    // 构建 YAML frontmatter
-    let yaml_lines: Vec<String> = metadata
+
+    // 如果元数据不是对象则跳过注入
+    let metadata_obj = metadata
         .as_object()
-        .ok_or("Metadata is not an object")?  
-        .iter()
-        .filter_map(|(key, value)| {
-            // 转换 JSON 值为 YAML 格式
-            match value {
-                Value::String(s) => Some(format!("{}: {}", key, s)),
-                Value::Bool(b) => Some(format!("{}: {}", key, b)),
-                Value::Number(n) => Some(format!("{}: {}", key, n)),
-                Value::Array(arr) => {
-                    // 数组转换为 YAML 列表
-                    let items: Vec<String> = arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| format!("  - {}", s)))
-                        .collect();
-                    if items.is_empty() {
-                        None
-                    } else {
-                        Some(format!("{}:\n{}", key, items.join("\n")))
-                    }
-                }
-                _ => None,
+        .ok_or("Metadata is not an object")?;
+
+    // 提取已有 frontmatter（如果存在）
+    let lines: Vec<&str> = content.split('\n').collect();
+    let mut existing_map = YamlMapping::new();
+    let mut body_start_idx = 0;
+
+    if lines.first().map(|l| l.trim()) == Some("---") {
+        if let Some(end_rel_idx) = lines.iter().skip(1).position(|l| l.trim() == "---") {
+            let end_idx = end_rel_idx + 1;
+            let frontmatter = lines[1..end_idx].join("\n");
+            body_start_idx = end_idx + 1;
+
+            if let Ok(parsed) = serde_yaml::from_str::<YamlMapping>(&frontmatter) {
+                existing_map = parsed;
             }
-        })
-        .collect();
-    
-    if yaml_lines.is_empty() {
-        return Ok(()); // 没有有效的元数据，不需要修改文件
-    }
-    
-    // 构建新内容
-    let new_content = if has_frontmatter {
-        // 替换现有的 frontmatter
-        if let Some(end_pos) = content[3..].find("---") {
-            let body = &content[end_pos + 6..]; // 跳过第二个 "---" 和换行符
-            format!("---\n{}\n---\n{}", yaml_lines.join("\n"), body.trim_start())
-        } else {
-            // frontmatter 格式不正确，在前面添加
-            format!("---\n{}\n---\n\n{}", yaml_lines.join("\n"), content)
         }
+    }
+
+    // 将新元数据转换为 YAML Mapping 并覆盖现有键
+    if let Ok(new_meta_yaml) = serde_yaml::to_value(metadata_obj) {
+        if let YamlValue::Mapping(map) = new_meta_yaml {
+            for (k, v) in map {
+                existing_map.insert(k, v);
+            }
+        }
+    }
+
+    // 如果合并后为空则无需写回
+    if existing_map.is_empty() {
+        return Ok(());
+    }
+
+    let merged_yaml = serde_yaml::to_string(&YamlValue::Mapping(existing_map))
+        .map_err(|e| format!("Failed to serialize metadata: {}", e))?;
+
+    let body = if body_start_idx >= lines.len() {
+        String::new()
     } else {
-        // 添加新的 frontmatter
-        format!("---\n{}\n---\n\n{}", yaml_lines.join("\n"), content)
+        lines[body_start_idx..].join("\n")
     };
-    
+
+    let new_content = format!("---\n{}---\n\n{}", merged_yaml, body.trim_start_matches('\n'));
+
     // 写回文件
     fs::write(file_path, new_content)
         .map_err(|e| format!("Failed to write markdown file: {}", e))?;
-    
+
     Ok(())
 }
 
