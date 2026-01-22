@@ -349,9 +349,9 @@ const nextStep = async () => {
         </div>
       </div>
 
-      <div v-else class="border border-dashed border-[#e5e7eb] rounded-xl p-5 bg-[#f8fafc]">
+      <div v-else class="border border-dashed border-[#e5e7eb] rounded-xl px-4 py-3 bg-[#f8fafc]">
         <label class="block mb-2 font-bold text-[#1f2937]">Markdown 文本</label>
-        <textarea v-model="textContent" class="w-full border border-[#e5e7eb] rounded-xl p-3.5 text-sm font-mono bg-white text-[#111827] resize-y min-h-65" placeholder="粘贴你的 Markdown，图片引用会被自动扫描并复制到临时目录。" rows="12"></textarea>
+        <textarea v-model="textContent" class="w-full border border-[#e5e7eb] rounded-xl p-3.5 text-sm font-mono bg-white text-[#111827] resize-y min-h-45" placeholder="粘贴你的 Markdown，图片引用会被自动扫描并复制到临时目录。" rows="7"></textarea>
       </div>
 
       <div v-if="prepareError" class="mt-3 px-3.5 py-3 rounded-xl bg-[#fef2f2] text-[#b91c1c] border border-[#fecdd3]">{{ prepareError }}</div>

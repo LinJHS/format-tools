@@ -201,7 +201,7 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
 export const DEFAULT_CONFIG: TemplateConfig = {
   title: '',
   author: '',
-  date: new Date().toISOString().split('T')[0],  // 当前日期
+  date: '',
   subtitle: '',
   abstract: '',
   languageStyle: 'zh-academic',
