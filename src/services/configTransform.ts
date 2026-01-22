@@ -92,6 +92,7 @@ export function buildPandocMetadata(config: Partial<TemplateConfig>): PandocMeta
       metadata.chapters = true
       metadata.numberSections = true
       metadata.chaptersDepth = 1
+      metadata.sectionsDepth = 3  // 最多往下三级
       metadata.autoSectionLabels = true
       metadata.secHeaderDelim = ['.', '']
       break
@@ -100,17 +101,25 @@ export function buildPandocMetadata(config: Partial<TemplateConfig>): PandocMeta
       metadata.chapters = true
       metadata.numberSections = true
       metadata.chaptersDepth = 0  // 一级标题不编号
-      metadata.sectionsDepth = 3
+      metadata.sectionsDepth = 3  // 最多往下三级
       metadata.autoSectionLabels = true
       metadata.secHeaderDelim = ['.', '']
       break
       
-    case 'multilevel':
-      metadata.chapters = true
-      metadata.numberSections = true
-      metadata.sectionsDepth = 4
-      metadata.autoSectionLabels = true
-      metadata.secHeaderDelim = ['.', '']
+    case 'custom':
+      if (config.customSectionConfig) {
+        metadata.chapters = true
+        metadata.numberSections = true
+        const { startLevel, depth } = config.customSectionConfig
+        if (startLevel === 1) {
+          metadata.chaptersDepth = 1
+        } else {
+          metadata.chaptersDepth = 0  // 一级标题不编号
+        }
+        metadata.sectionsDepth = depth
+        metadata.autoSectionLabels = true
+        metadata.secHeaderDelim = ['.', '']
+      }
       break
   }
   
@@ -119,12 +128,6 @@ export function buildPandocMetadata(config: Partial<TemplateConfig>): PandocMeta
     case 'basic':
       metadata.linkReferences = false
       metadata.cref = false
-      break
-      
-    case 'smart':
-      metadata.linkReferences = true
-      metadata.cref = true
-      metadata.nameInLink = false
       break
       
     case 'full-link':
@@ -144,24 +147,6 @@ export function buildPandocMetadata(config: Partial<TemplateConfig>): PandocMeta
     case 'auto':
       metadata.autoEqnLabels = true
       metadata.tableEqns = false
-      break
-      
-    case 'table':
-      metadata.autoEqnLabels = true
-      metadata.tableEqns = true
-      break
-  }
-  
-  // ==================== 代码块 ====================
-  switch (config.codeBlock) {
-    case 'normal':
-      metadata.listings = false
-      metadata.codeBlockCaptions = true
-      break
-      
-    case 'listings':
-      metadata.listings = true
-      metadata.codeBlockCaptions = true
       break
   }
   
@@ -211,24 +196,30 @@ export function validateConfig(config: Partial<TemplateConfig>): { valid: boolea
     errors.push(`语言风格无效: ${config.languageStyle}`)
   }
   
-  const validSectionNumbering = ['none', 'basic', 'from-h2', 'multilevel']
+  const validSectionNumbering = ['none', 'basic', 'from-h2', 'custom']
   if (config.sectionNumbering && !validSectionNumbering.includes(config.sectionNumbering)) {
     errors.push(`章节编号无效: ${config.sectionNumbering}`)
   }
   
-  const validCrossReference = ['basic', 'smart', 'full-link']
+  // 验证自定义章节配置
+  if (config.sectionNumbering === 'custom' && config.customSectionConfig) {
+    const { startLevel, depth } = config.customSectionConfig
+    if (startLevel < 1 || startLevel > 6) {
+      errors.push(`起始级别必须在 1-6 之间: ${startLevel}`)
+    }
+    if (depth < 1 || depth > 6) {
+      errors.push(`编号深度必须在 1-6 之间: ${depth}`)
+    }
+  }
+  
+  const validCrossReference = ['basic', 'full-link']
   if (config.crossReference && !validCrossReference.includes(config.crossReference)) {
     errors.push(`交叉引用无效: ${config.crossReference}`)
   }
   
-  const validEquationNumbering = ['manual', 'auto', 'table']
+  const validEquationNumbering = ['manual', 'auto']
   if (config.equationNumbering && !validEquationNumbering.includes(config.equationNumbering)) {
     errors.push(`公式编号无效: ${config.equationNumbering}`)
-  }
-  
-  const validCodeBlock = ['normal', 'listings']
-  if (config.codeBlock && !validCodeBlock.includes(config.codeBlock)) {
-    errors.push(`代码块无效: ${config.codeBlock}`)
   }
   
   return {

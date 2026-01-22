@@ -15,17 +15,22 @@ export interface BasicMetadata {
 // ==================== 高级配置选项 ====================
 
 export type LanguageStyle = 'zh-academic' | 'en-academic' | 'business'
-export type SectionNumbering = 'none' | 'basic' | 'from-h2' | 'multilevel'
-export type CrossReference = 'basic' | 'smart' | 'full-link'
-export type EquationNumbering = 'manual' | 'auto' | 'table'
-export type CodeBlock = 'normal' | 'listings'
+export type SectionNumbering = 'none' | 'basic' | 'from-h2' | 'custom'
+export type CrossReference = 'basic' | 'full-link'
+export type EquationNumbering = 'manual' | 'auto'
+
+// 自定义章节编号配置
+export interface CustomSectionConfig {
+  startLevel: number  // 从几级标题开始编号 (1-6)
+  depth: number       // 往下几级 (1-6)
+}
 
 export interface AdvancedConfig {
   languageStyle: LanguageStyle
   sectionNumbering: SectionNumbering
+  customSectionConfig?: CustomSectionConfig  // 当 sectionNumbering = 'custom' 时使用
   crossReference: CrossReference
   equationNumbering: EquationNumbering
-  codeBlock: CodeBlock
 }
 
 // ==================== 完整模板配置 ====================
@@ -34,9 +39,9 @@ export interface TemplateConfig extends BasicMetadata {
   // 高级配置
   languageStyle: LanguageStyle
   sectionNumbering: SectionNumbering
+  customSectionConfig?: CustomSectionConfig
   crossReference: CrossReference
   equationNumbering: EquationNumbering
-  codeBlock: CodeBlock
 }
 
 // ==================== 配置预设 ====================
@@ -147,25 +152,25 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
       preview: '前言\n  背景\n  目标'
     },
     'basic': {
-      title: '章节编号（从一级标题）',
-      description: '从一级标题(#)开始编号，适合书籍、长文档、技术手册。',
-      example: '1 前言\n  1.1 背景\n  1.2 目标',
+      title: '从一级标题开始',
+      description: '从一级标题(#)开始编号，最多往下三级标题。适合书籍、长文档。',
+      example: '1 前言\n  1.1 背景\n    1.1.1 国内现状',
       affectedFields: ['chapters', 'numberSections', 'chaptersDepth', 'autoSectionLabels'],
-      preview: '1 前言\n  1.1 背景\n  1.2 目标'
+      preview: '1 前言\n  1.1 背景\n    1.1.1 国内现状'
     },
     'from-h2': {
-      title: '章节编号（从二级标题）',
-      description: '一级标题作为章名不编号，从二级标题(##)开始编号。适合学位论文、技术报告。',
-      example: '引言（不编号）\n  1.1 研究背景\n  1.2 目标',
+      title: '从二级标题开始',
+      description: '一级标题作为章名不编号，从二级标题(##)开始编号，最多往下三级。',
+      example: '引言（不编号）\n  1.1 研究背景\n    1.1.1 国内现状',
       affectedFields: ['chapters', 'numberSections', 'chaptersDepth', 'sectionsDepth'],
-      preview: '引言\n  1.1 研究背景\n  1.2 目标'
+      preview: '引言\n  1.1 研究背景\n    1.1.1 国内现状'
     },
-    'multilevel': {
-      title: '多级章节编号',
-      description: '深度嵌套编号，支持三级及以上。适合复杂的技术文档。',
-      example: '1 研究背景\n  1.1 国内现状\n    1.1.1 高校研究',
-      affectedFields: ['chapters', 'numberSections', 'sectionsDepth'],
-      preview: '1 研究背景\n  1.1 国内现状\n    1.1.1 高校研究'
+    'custom': {
+      title: '自定义编号',
+      description: '自定义从几级标题开始编号，以及往下编号几级。',
+      example: '可选择从1-6级标题开始，往下1-6级',
+      affectedFields: ['chapters', 'numberSections', 'sectionsDepth', 'chaptersDepth'],
+      preview: '根据自定义配置生成'
     }
   },
   crossReference: {
@@ -175,13 +180,6 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
       example: '如图 1 所示',
       affectedFields: ['linkReferences', 'cref'],
       preview: '见图 1（纯文本）'
-    },
-    'smart': {
-      title: '智能引用',
-      description: 'LaTeX 输出时使用 cleveref 包自动添加引用类型，其他格式带超链接。',
-      example: 'LaTeX: 自动识别类型\n其他: 可点击跳转',
-      affectedFields: ['cref', 'linkReferences'],
-      preview: '见图 1（可点击）'
     },
     'full-link': {
       title: '全链接引用',
@@ -205,29 +203,6 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
       example: '所有 display math 自动获得编号',
       affectedFields: ['autoEqnLabels', 'tableEqns'],
       preview: '所有公式自动编号'
-    },
-    'table': {
-      title: '表格式编号',
-      description: '公式编号独立成块，适合某些期刊格式要求。',
-      example: '公式和编号分离显示',
-      affectedFields: ['autoEqnLabels', 'tableEqns'],
-      preview: '公式  (1)\n编号独立'
-    }
-  },
-  codeBlock: {
-    'normal': {
-      title: '普通代码块',
-      description: '标准 Pandoc 代码高亮，兼容性最好。',
-      example: '```python\nprint("Hello")\n```',
-      affectedFields: ['listings', 'codeBlockCaptions'],
-      preview: '标准代码高亮'
-    },
-    'listings': {
-      title: 'LaTeX listings',
-      description: 'LaTeX 输出时使用专业的 listings 包，支持代码块标题。',
-      example: '需配合 --syntax-highlighting=idiomatic',
-      affectedFields: ['listings', 'codeBlockCaptions'],
-      preview: '专业排版（仅 LaTeX）'
     }
   }
 }
@@ -237,14 +212,13 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
 export const DEFAULT_CONFIG: TemplateConfig = {
   title: '',
   author: '',
-  date: new Date().toISOString().split('T')[0],
+  date: new Date().toISOString().split('T')[0],  // 当前日期
   subtitle: '',
   abstract: '',
   languageStyle: 'zh-academic',
   sectionNumbering: 'none',
   crossReference: 'basic',
-  equationNumbering: 'manual',
-  codeBlock: 'normal'
+  equationNumbering: 'manual'
 }
 
 // ==================== 内置预设 ====================
@@ -264,9 +238,8 @@ export const BUILTIN_PRESETS: ConfigPreset[] = [
     config: {
       languageStyle: 'zh-academic',
       sectionNumbering: 'from-h2',
-      crossReference: 'smart',
-      equationNumbering: 'auto',
-      codeBlock: 'normal'
+      crossReference: 'basic',
+      equationNumbering: 'auto'
     },
     isBuiltin: true
   },
@@ -277,9 +250,8 @@ export const BUILTIN_PRESETS: ConfigPreset[] = [
     config: {
       languageStyle: 'en-academic',
       sectionNumbering: 'basic',
-      crossReference: 'smart',
-      equationNumbering: 'auto',
-      codeBlock: 'listings'
+      crossReference: 'basic',
+      equationNumbering: 'auto'
     },
     isBuiltin: true
   },
@@ -291,8 +263,7 @@ export const BUILTIN_PRESETS: ConfigPreset[] = [
       languageStyle: 'business',
       sectionNumbering: 'basic',
       crossReference: 'full-link',
-      equationNumbering: 'manual',
-      codeBlock: 'normal'
+      equationNumbering: 'manual'
     },
     isBuiltin: true
   },
@@ -302,10 +273,9 @@ export const BUILTIN_PRESETS: ConfigPreset[] = [
     description: '适合技术手册、API 文档',
     config: {
       languageStyle: 'zh-academic',
-      sectionNumbering: 'multilevel',
+      sectionNumbering: 'basic',  // 修改为 basic，自动最多三级
       crossReference: 'full-link',
-      equationNumbering: 'manual',
-      codeBlock: 'normal'
+      equationNumbering: 'manual'
     },
     isBuiltin: true
   }

@@ -155,11 +155,37 @@
                   <input 
                     v-model="localConfig.sectionNumbering" 
                     type="radio" 
-                    value="multilevel"
+                    value="custom"
                   />
-                  <span>多级编号</span>
-                  <HelpIcon group="sectionNumbering" option="multilevel" />
+                  <span>自定义</span>
+                  <HelpIcon group="sectionNumbering" option="custom" />
                 </label>
+              </div>
+              
+              <!-- 自定义章节配置 -->
+              <div v-if="localConfig.sectionNumbering === 'custom'" class="custom-config">
+                <div class="custom-config-row">
+                  <label>从几级标题开始：</label>
+                  <select v-model.number="localConfig.customSectionConfig!.startLevel">
+                    <option :value="1">1级 (#)</option>
+                    <option :value="2">2级 (##)</option>
+                    <option :value="3">3级 (###)</option>
+                    <option :value="4">4级 (####)</option>
+                    <option :value="5">5级 (#####)</option>
+                    <option :value="6">6级 (######)</option>
+                  </select>
+                </div>
+                <div class="custom-config-row">
+                  <label>往下几级：</label>
+                  <select v-model.number="localConfig.customSectionConfig!.depth">
+                    <option :value="1">1级</option>
+                    <option :value="2">2级</option>
+                    <option :value="3">3级</option>
+                    <option :value="4">4级</option>
+                    <option :value="5">5级</option>
+                    <option :value="6">6级</option>
+                  </select>
+                </div>
               </div>
             </div>
             
@@ -178,15 +204,6 @@
                   />
                   <span>基础引用</span>
                   <HelpIcon group="crossReference" option="basic" />
-                </label>
-                <label class="radio-option">
-                  <input 
-                    v-model="localConfig.crossReference" 
-                    type="radio" 
-                    value="smart"
-                  />
-                  <span>智能引用</span>
-                  <HelpIcon group="crossReference" option="smart" />
                 </label>
                 <label class="radio-option">
                   <input 
@@ -224,43 +241,6 @@
                   />
                   <span>自动编号</span>
                   <HelpIcon group="equationNumbering" option="auto" />
-                </label>
-                <label class="radio-option">
-                  <input 
-                    v-model="localConfig.equationNumbering" 
-                    type="radio" 
-                    value="table"
-                  />
-                  <span>表格式编号</span>
-                  <HelpIcon group="equationNumbering" option="table" />
-                </label>
-              </div>
-            </div>
-            
-            <!-- 代码块 -->
-            <div class="form-group">
-              <label class="section-label">
-                代码块
-                <HelpIcon group="codeBlock" />
-              </label>
-              <div class="radio-group">
-                <label class="radio-option">
-                  <input 
-                    v-model="localConfig.codeBlock" 
-                    type="radio" 
-                    value="normal"
-                  />
-                  <span>普通代码块</span>
-                  <HelpIcon group="codeBlock" option="normal" />
-                </label>
-                <label class="radio-option">
-                  <input 
-                    v-model="localConfig.codeBlock" 
-                    type="radio" 
-                    value="listings"
-                  />
-                  <span>LaTeX listings</span>
-                  <HelpIcon group="codeBlock" option="listings" />
                 </label>
               </div>
             </div>
@@ -300,15 +280,44 @@ const emit = defineEmits<Emits>()
 
 const localConfig = ref<Partial<TemplateConfig>>({ ...props.config })
 
+// 初始化默认值
+if (!localConfig.value.date) {
+  localConfig.value.date = new Date().toISOString().split('T')[0]
+}
+
+// 初始化自定义章节配置
+if (!localConfig.value.customSectionConfig) {
+  localConfig.value.customSectionConfig = { startLevel: 1, depth: 3 }
+}
+
+// 监听章节编号类型变化，自动初始化自定义配置
+watch(() => localConfig.value.sectionNumbering, (newValue) => {
+  if (newValue === 'custom' && !localConfig.value.customSectionConfig) {
+    localConfig.value.customSectionConfig = { startLevel: 1, depth: 3 }
+  }
+})
+
 // 监听外部配置变化
 watch(() => props.config, (newConfig) => {
   localConfig.value = { ...newConfig }
+  if (!localConfig.value.date) {
+    localConfig.value.date = new Date().toISOString().split('T')[0]
+  }
+  if (!localConfig.value.customSectionConfig) {
+    localConfig.value.customSectionConfig = { startLevel: 1, depth: 3 }
+  }
 }, { deep: true })
 
 // 监听对话框打开
 watch(() => props.visible, (visible) => {
   if (visible) {
     localConfig.value = { ...props.config }
+    if (!localConfig.value.date) {
+      localConfig.value.date = new Date().toISOString().split('T')[0]
+    }
+    if (!localConfig.value.customSectionConfig) {
+      localConfig.value.customSectionConfig = { startLevel: 1, depth: 3 }
+    }
   }
 })
 
@@ -486,7 +495,8 @@ label {
 
 input[type="text"],
 input[type="date"],
-textarea {
+textarea,
+select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
@@ -497,7 +507,8 @@ textarea {
 
 input[type="text"]:focus,
 input[type="date"]:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   outline: none;
   border-color: #4CAF50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
@@ -506,6 +517,42 @@ textarea:focus {
 textarea {
   resize: vertical;
   font-family: inherit;
+}
+
+select {
+  cursor: pointer;
+  background: white;
+}
+
+.custom-config {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.custom-config-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.custom-config-row:last-child {
+  margin-bottom: 0;
+}
+
+.custom-config-row label {
+  min-width: 120px;
+  margin-bottom: 0;
+  font-size: 0.85rem;
+}
+
+.custom-config-row select {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 0.85rem;
 }
 
 .radio-group {
