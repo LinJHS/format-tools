@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../auth-private/stores/auth'
 import { LINKS } from '../config/links'
 
 const router = useRouter()
