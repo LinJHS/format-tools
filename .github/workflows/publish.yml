@@ -1,0 +1,129 @@
+name: Publish Format Tools
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build Type'
+        required: true
+        default: 'opensource'
+        type: choice
+        options:
+          - opensource
+          - private
+
+jobs:
+  build-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Determine Build Type
+        id: build-type
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.build_type }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=private" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone Private Auth Module
+        if: steps.build-type.outputs.type == 'private'
+        shell: bash
+        env:
+          GH_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
+        run: |
+          cd "Format Tools/src"
+          git clone https://$GH_PAT@github.com/LinJHS/format-tools-auth-private.git auth-private
+
+      - name: Create Environment File (Private Build)
+        if: steps.build-type.outputs.type == 'private'
+        shell: bash
+        working-directory: Format Tools
+        run: |
+          cat > .env.local << EOF
+          VITE_ENABLE_AUTH=true
+          VITE_EMAS_APP_ID=${{ secrets.EMAS_APP_ID }}
+          VITE_EMAS_SPACE_ID=${{ secrets.EMAS_SPACE_ID }}
+          VITE_EMAS_CLIENT_SECRET=${{ secrets.EMAS_CLIENT_SECRET }}
+          VITE_EMAS_ENDPOINT=${{ secrets.EMAS_ENDPOINT }}
+          EOF
+
+      - name: Create Environment File (Open Source Build)
+        if: steps.build-type.outputs.type == 'opensource'
+        shell: bash
+        working-directory: Format Tools
+        run: |
+          cat > .env.local << EOF
+          VITE_ENABLE_AUTH=false
+          EOF
+
+      - name: Install frontend dependencies
+        working-directory: Format Tools
+        run: pnpm install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__
+          releaseName: 'Format Tools v__VERSION__'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false
+          projectPath: Format Tools
+          args: ${{ matrix.args }}
+
+# Required GitHub Secrets:
+# For private builds:
+#   - PRIVATE_REPO_PAT: Personal Access Token with repo scope (for cloning private repo)
+#   - EMAS_APP_ID: Your EMAS application ID
+#   - EMAS_SPACE_ID: Your EMAS space ID
+#   - EMAS_CLIENT_SECRET: Your EMAS client secret
+#   - EMAS_ENDPOINT: EMAS API endpoint (e.g., https://api.next.bspapp.com)
+#
+# Notes:
+# - For open source builds: set VITE_ENABLE_AUTH=false, no auth module cloned
+# - For private builds: set VITE_ENABLE_AUTH=true, clone auth-private, inject EMAS credentials
+# - Tag push triggers private build by default
+# - Manual workflow_dispatch allows choosing build type

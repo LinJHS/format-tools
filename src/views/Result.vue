@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
-import { openPath } from '@tauri-apps/plugin-opener'
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
 
 const uploadStore = useUploadStore()
 const router = useRouter()
@@ -36,9 +36,9 @@ const openFile = async () => {
 }
 
 const openFolder = async () => {
-  if (!folderPath.value) return
+  if (!outputPath.value) return
   try {
-    await openPath(folderPath.value)
+    await revealItemInDir(outputPath.value)
   } catch (e) {
     console.warn('无法打开文件夹:', e)
   }
