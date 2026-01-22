@@ -1,19 +1,39 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { useAuthStore } from '../stores/auth'
+import { LINKS } from '../config/links'
 
-const isLoggedIn = ref(false) // TODO: 后续接入真实登录状态
-const userName = ref('未登录')
-const userEmail = ref('')
-const membershipLevel = ref('基础版')
+const router = useRouter()
+const authStore = useAuthStore()
+
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
+const isLoggedIn = computed(() => authStore.isLoggedIn)
+const userName = computed(() => authStore.user?.spec?.displayName || authStore.user?.metadata?.name || '未登录')
+const userEmail = computed(() => authStore.user?.spec?.email || '')
+const membershipLevel = computed(() => {
+  if (!isLoggedIn.value) return '基础版'
+  const level = authStore.subscriptionLevel
+  if (level === 'master') return '大师版'
+  if (level === 'pro') return '专业版'
+  return '基础版'
+})
 
 const goToLogin = async () => {
-  await openUrl('https://linjhs.com/login')
+  if (authEnabled) {
+    router.push('/login')
+  } else {
+    await openUrl(LINKS.login)
+  }
 }
 
 const goToShop = async () => {
-  await openUrl('https://linjhs.com/shop/products')
+  await openUrl(LINKS.shop)
+}
+
+const handleLogout = () => {
+  authStore.clearAuth()
 }
 
 const menuItems = [
@@ -55,7 +75,7 @@ const menuItems = [
                   立即登录
                 </button>
                 <button 
-                  @click="async () => await openUrl('https://linjhs.com/signup')"
+                  @click="async () => await openUrl(LINKS.signup)"
                   class="bg-gray-200 text-gray-700 px-6 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                 >
                   注册账号
@@ -71,6 +91,20 @@ const menuItems = [
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                 </svg>
                 {{ membershipLevel }}
+              </div>
+              <div class="mt-4 flex gap-3">
+                <button 
+                  @click="goToShop"
+                  class="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                >
+                  会员中心
+                </button>
+                <button 
+                  @click="handleLogout"
+                  class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  退出登录
+                </button>
               </div>
             </div>
           </div>
@@ -106,7 +140,7 @@ const menuItems = [
           <h3 class="text-lg font-bold text-gray-900 mb-3">快速链接</h3>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <a 
-              href="https://linjhs.com/login" 
+              :href="LINKS.login"
               target="_blank"
               class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all"
             >
@@ -116,7 +150,7 @@ const menuItems = [
               </svg>
             </a>
             <a 
-              href="https://linjhs.com/signup" 
+              :href="LINKS.signup"
               target="_blank"
               class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all"
             >
@@ -126,7 +160,7 @@ const menuItems = [
               </svg>
             </a>
             <a 
-              href="https://linjhs.com/shop/products" 
+              :href="LINKS.shop"
               target="_blank"
               class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all"
             >

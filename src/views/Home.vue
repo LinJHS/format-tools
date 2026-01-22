@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { useAuthStore } from '../stores/auth'
+import { LINKS } from '../config/links'
 
 const router = useRouter()
-const isLoggedIn = ref(false) // TODO: 后续接入真实登录状态
+const authStore = useAuthStore()
+const isLoggedIn = computed(() => authStore.isLoggedIn)
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 
 const features = [
@@ -35,11 +38,15 @@ const startConvert = () => {
 }
 
 const goToLogin = async () => {
-  await openUrl('https://linjhs.com/login')
+  if (authEnabled) {
+    router.push('/login')
+  } else {
+    await openUrl(LINKS.login)
+  }
 }
 
 const goToRegister = async () => {
-  await openUrl('https://linjhs.com/signup')
+  await openUrl(LINKS.signup)
 }
 </script>
 
