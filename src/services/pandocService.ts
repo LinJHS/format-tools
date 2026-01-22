@@ -18,6 +18,7 @@ export interface PrepareInputPayload {
   source_type: InputSourceType
   path?: string
   original_name?: string
+  selected_markdown?: string
   content?: string
   suggested_name?: string
 }
@@ -27,6 +28,7 @@ export interface PreparedInput {
   assets_dir: string
   image_count: number
   copied_images: string[]
+  markdown_files: string[]
   source_name?: string
   source_dir?: string
 }

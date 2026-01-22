@@ -149,17 +149,7 @@ function hideHelp() {
           <button class="close-btn" @click="hideHelp">&times;</button>
         </div>
         <div class="help-body">
-          <p class="help-description">{{ helpContent.description }}</p>
-
-          <div v-if="helpContent.example" class="help-example">
-            <h4>示例</h4>
-            <pre>{{ helpContent.example }}</pre>
-          </div>
-
-          <div v-if="helpContent.preview" class="help-preview">
-            <h4>效果预览</h4>
-            <pre>{{ helpContent.preview }}</pre>
-          </div>
+          <p class="help-description" v-html="helpContent.description"></p>
         </div>
       </div>
     </div>
@@ -275,30 +265,5 @@ function hideHelp() {
   font-size: 1rem;
   line-height: 1.6;
   color: #555;
-}
-
-.help-example,
-.help-preview,
-.help-fields {
-  margin-bottom: 20px;
-}
-
-.help-example h4,
-.help-preview h4 {
-  margin: 0 0 10px 0;
-  font-size: 1rem;
-  color: #333;
-}
-
-.help-example pre,
-.help-preview pre {
-  background: #f5f5f5;
-  padding: 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: #333;
-  margin: 0;
 }
 </style>

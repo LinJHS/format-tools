@@ -25,7 +25,6 @@ const prepareError = ref('')
 const showMdSelectionDialog = ref(false)
 const pendingMarkdownFiles = ref<string[]>([])
 const selectedMdFile = ref<string>('')
-const pendingPreparedInput = ref<PreparedInput | null>(null)
 const unlistenDragDrop = ref<(() => void) | null>(null)
 
 const supportedExtensions = ['.md', '.markdown', '.txt', '.zip', '.7z', '.tar.gz', '.tar.xz']
@@ -196,18 +195,34 @@ const switchTab = (tab: 'file' | 'text') => {
 }
 
 const confirmMdSelection = async () => {
-  showMdSelectionDialog.value = false
-  if (!selectedMdFile.value || !pendingPreparedInput.value) {
+  if (!selectedMdFile.value) {
     prepareError.value = '请选择一个 Markdown 文件'
     return
   }
 
-  uploadStore.setMode(activeTab.value)
-  uploadStore.addFiles(selectedFile.value ? [selectedFile.value] : [])
-  uploadStore.setMarkdownText(textContent.value)
-  uploadStore.setPreparedInput(pendingPreparedInput.value)
-  uploadStore.setStep(2)
-  router.push('/template')
+  const payload = buildPayload()
+  if (!payload) return
+
+  try {
+    isPreparing.value = true
+    const prepared = await pandocService.prepareInput({
+      ...payload,
+      selected_markdown: selectedMdFile.value
+    })
+
+    uploadStore.setMode(activeTab.value)
+    uploadStore.addFiles(selectedFile.value ? [selectedFile.value] : [])
+    uploadStore.setMarkdownText(textContent.value)
+    uploadStore.setPreparedInput(prepared)
+    uploadStore.setStep(2)
+    showMdSelectionDialog.value = false
+    router.push('/template')
+  } catch (error) {
+    console.error('预处理失败:', error)
+    prepareError.value = '预处理失败，请检查文件内容或稍后重试'
+  } finally {
+    isPreparing.value = false
+  }
 }
 
 const buildPayload = (): PrepareInputPayload | null => {
@@ -258,12 +273,11 @@ const nextStep = async () => {
     const prepared: PreparedInput = await pandocService.prepareInput(payload)
 
     if (activeTab.value === 'file' && isArchive) {
-      const mdFiles = prepared.copied_images.filter(img => /\.md$/i.test(img))
+      const mdFiles = prepared.markdown_files || []
       
       if (mdFiles.length > 1) {
         pendingMarkdownFiles.value = mdFiles
         selectedMdFile.value = mdFiles[0]
-        pendingPreparedInput.value = prepared
         showMdSelectionDialog.value = true
         isPreparing.value = false
         return

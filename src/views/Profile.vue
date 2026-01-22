@@ -56,15 +56,15 @@ const menuItems = [
       <template v-else>
         <!-- User Card -->
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
-          <div class="bg-linear-to-r from-purple-600 to-indigo-600 h-28"></div>
+          <div class="bg-linear-to-r from-purple-600 to-indigo-600 h-20"></div>
           <div class="px-6 pb-6">
-            <div class="flex items-end -mt-16 mb-6">
+            <div class="flex items-end -mt-16">
               <div class="w-28 h-28 rounded-full bg-white shadow-lg flex items-center justify-center text-4xl border-4 border-white">
                 {{ isLoggedIn ? '👤' : '🔒' }}
               </div>
             </div>
             
-            <div v-if="!isLoggedIn" class="text-center py-6">
+            <div v-if="!isLoggedIn" class="text-center">
               <h2 class="text-xl font-bold text-gray-900 mb-3">您还未登录</h2>
               <p class="text-gray-600 mb-5 text-sm">登录后可以查看会员信息、转换历史等更多功能</p>
               <div class="flex gap-3 justify-center">

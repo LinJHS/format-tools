@@ -123,22 +123,19 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
   languageStyle: {
     'zh-academic': {
       title: '中文学术风格',
-      description: '适用于中文学术论文、报告、书籍。使用"图"、"表"、"公式"等中文前缀。',
-      example: '图题显示为: "图 1: 系统架构"\n引用显示为: "如图 1 所示..."',
+      description: '<p>适用于中文学术论文、报告、书籍，使用中文前缀。</p><pre>图 1：系统架构\n如图 1 所示...</pre>',
       affectedFields: ['figureTitle', 'tableTitle', 'figPrefix', 'tblPrefix', 'titleDelim'],
       preview: '图 1: 系统架构图'
     },
     'en-academic': {
       title: '英文学术风格',
-      description: '适用于英文学术论文、国际期刊投稿。使用"Figure"、"Table"等英文前缀，支持单复数。',
-      example: '单个引用: "see fig. 1"\n多个引用: "see figs. 1-3"',
+      description: '<p>适用于英文学术论文、国际期刊，使用英文前缀。</p><pre>Figure 1: System Architecture\nsee fig. 1</pre>',
       affectedFields: ['figureTitle', 'tableTitle', 'figPrefix', 'tblPrefix'],
       preview: 'Figure 1: System Architecture'
     },
     'business': {
       title: '商务报告风格',
-      description: '适用于企业报告、项目文档。使用清晰的分隔符，所有引用带超链接。',
-      example: '图题显示为: "图 1 - 销售趋势"\n引用可点击跳转',
+      description: '<p>适用于企业报告、项目文档，引用默认带链接。</p><pre>图 1 - 销售趋势\n点击“图 1”可跳转</pre>',
       affectedFields: ['titleDelim', 'linkReferences', 'nameInLink'],
       preview: '图 1 - 销售趋势图'
     }
@@ -146,29 +143,25 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
   sectionNumbering: {
     'none': {
       title: '无编号',
-      description: '章节标题不带编号，适合短文档、博客文章。',
-      example: '# 前言\n## 背景\n## 目标',
+      description: '<p>章节标题不带编号，适合短文档、博客。</p><pre># 前言\n## 背景\n## 目标</pre>',
       affectedFields: ['chapters', 'numberSections'],
       preview: '前言\n  背景\n  目标'
     },
     'basic': {
       title: '从一级标题开始',
-      description: '从一级标题(#)开始编号，最多往下三级标题。适合书籍、长文档。',
-      example: '1 前言\n  1.1 背景\n    1.1.1 国内现状',
+      description: '<p>从一级标题(#)开始编号，默认向下 3 级。</p><pre>1 前言\n  1.1 背景\n    1.1.1 国内现状</pre>',
       affectedFields: ['chapters', 'numberSections', 'chaptersDepth', 'autoSectionLabels'],
       preview: '1 前言\n  1.1 背景\n    1.1.1 国内现状'
     },
     'from-h2': {
       title: '从二级标题开始',
-      description: '一级标题作为章名不编号，从二级标题(##)开始编号，最多往下三级。',
-      example: '引言（不编号）\n  1.1 研究背景\n    1.1.1 国内现状',
+      description: '<p>一级标题不编号，从二级标题(##)开始，默认向下 3 级。</p><pre>引言（不编号）\n  1.1 研究背景\n    1.1.1 国内现状</pre>',
       affectedFields: ['chapters', 'numberSections', 'chaptersDepth', 'sectionsDepth'],
       preview: '引言\n  1.1 研究背景\n    1.1.1 国内现状'
     },
     'custom': {
       title: '自定义编号',
-      description: '自定义从几级标题开始编号，以及往下编号几级。',
-      example: '可选择从1-6级标题开始，往下1-6级',
+      description: '<p>自定义起始级别和深度。</p><pre>起始：2级 (##)\n深度：4级</pre>',
       affectedFields: ['chapters', 'numberSections', 'sectionsDepth', 'chaptersDepth'],
       preview: '根据自定义配置生成'
     }
@@ -176,15 +169,13 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
   crossReference: {
     'basic': {
       title: '基础引用',
-      description: '标准的交叉引用，不添加超链接。',
-      example: '如图 1 所示',
+      description: '<p>标准交叉引用，不添加超链接。</p><pre>如图 1 所示</pre>',
       affectedFields: ['linkReferences', 'cref'],
       preview: '见图 1（纯文本）'
     },
     'full-link': {
       title: '全链接引用',
-      description: '所有引用都带超链接，引用文本也包含在链接内。',
-      example: '点击 "图 1" 整体跳转',
+      description: '<p>所有引用带超链接，引用文本整体可点击。</p><pre>点击 “图 1” 整体跳转</pre>',
       affectedFields: ['linkReferences', 'nameInLink'],
       preview: '见图 1（全文本可点击）'
     }
@@ -192,15 +183,13 @@ export const OPTION_HELP: Record<string, Record<string, OptionHelp>> = {
   equationNumbering: {
     'manual': {
       title: '手动编号',
-      description: '只对带标签的公式编号。需要在公式后添加 {#eq:label} 才会编号。',
-      example: '$$ E = mc^2 $$ {#eq:einstein}',
+      description: '<p>只对带标签的公式编号，需要 {#eq:label}。</p><pre>$$ E = mc^2 $$ {#eq:einstein}</pre>',
       affectedFields: ['autoEqnLabels'],
       preview: '仅标记的公式有编号'
     },
     'auto': {
       title: '自动编号',
-      description: '所有独立公式（$$ ... $$）自动编号。',
-      example: '所有 display math 自动获得编号',
+      description: '<p>所有独立公式（$$...$$）自动编号。</p><pre>$$ a^2 + b^2 = c^2 $$</pre>',
       affectedFields: ['autoEqnLabels', 'tableEqns'],
       preview: '所有公式自动编号'
     }

@@ -249,7 +249,7 @@ const handlePresetDialogClose = () => {
           <button class="bg-[#e5e7eb] text-[#374151] px-6 py-3 rounded-xl text-base font-bold cursor-pointer transition-all hover:bg-[#d1d5db]" @click="goBack">上一步</button>
           <button 
             v-if="selectedTemplate" 
-            class="bg-[#6366f1] text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all hover:bg-[#4f46e5]" 
+            class="bg-[#6366f1] text-white px-4 py-2 rounded-lg text-base font-medium cursor-pointer transition-all hover:bg-[#4f46e5]" 
             @click="showConfigDialog"
           >
             配置选项
