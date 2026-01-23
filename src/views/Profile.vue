@@ -15,7 +15,7 @@ const userEmail = computed(() => authStore.user?.spec?.email || '')
 const membershipLevel = computed(() => {
   if (!isLoggedIn.value) return '基础版'
   const level = authStore.subscriptionLevel
-  if (level === 'master') return '大师版'
+  if (level === 'ultra') return '大师版'
   if (level === 'pro') return '专业版'
   return '基础版'
 })
