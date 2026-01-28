@@ -8,10 +8,8 @@ declare module "*.vue" {
 
 interface ImportMetaEnv {
   readonly VITE_ENABLE_AUTH?: string
-  readonly VITE_EMAS_APP_ID?: string
-  readonly VITE_EMAS_SPACE_ID?: string
-  readonly VITE_EMAS_CLIENT_SECRET?: string
-  readonly VITE_EMAS_ENDPOINT?: string
+  readonly VITE_LOGIN_ENDPOINT?: string
+  readonly VITE_ENCRYPTION_KEY?: string
 }
 
 interface ImportMeta {
