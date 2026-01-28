@@ -26,6 +26,9 @@ importers:
       axios:
         specifier: ^1.13.2
         version: 1.13.2
+      crypto-js:
+        specifier: ^4.2.0
+        version: 4.2.0
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.6.3)(vue@3.5.27(typescript@5.6.3))
@@ -45,6 +48,9 @@ importers:
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.9.6
+      '@types/crypto-js':
+        specifier: ^4.2.2
+        version: 4.2.2
       '@vitejs/plugin-vue':
         specifier: ^5.2.1
         version: 5.2.4(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2))(vue@3.5.27(typescript@5.6.3))
@@ -569,6 +575,9 @@ packages:
   '@tauri-apps/plugin-opener@2.5.3':
     resolution: {integrity: sha512-CCcUltXMOfUEArbf3db3kCE7Ggy1ExBEBl51Ko2ODJ6GDYHRp1nSNlQm5uNCFY5k7/ufaK5Ib3Du/Zir19IYQQ==}
 
+  '@types/crypto-js@4.2.2':
+    resolution: {integrity: sha512-sDOLlVbHhXpAUAL0YHDUUwDZf3iN4Bwi4W6a0W0b+QcAezUbRtH4FVb+9J4h+XFPW7l/gQ9F8qC7P+Ec4k8QVQ==}
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -688,6 +697,9 @@ packages:
   copy-anything@4.0.5:
     resolution: {integrity: sha512-7Vv6asjS4gMOuILabD3l739tsaxFQmC+a7pLZm02zyvs8p977bL3zEgq3yDk5rn9B0PbYgIv++jmHcuUab4RhA==}
     engines: {node: '>=18'}
+
+  crypto-js@4.2.0:
+    resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
@@ -1377,6 +1389,8 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.9.1
 
+  '@types/crypto-js@4.2.2': {}
+
   '@types/estree@1.0.8': {}
 
   '@vitejs/plugin-vue@5.2.4(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2))(vue@3.5.27(typescript@5.6.3))':
@@ -1541,6 +1555,8 @@ snapshots:
   copy-anything@4.0.5:
     dependencies:
       is-what: 5.5.0
+
+  crypto-js@4.2.0: {}
 
   csstype@3.2.3: {}
 
