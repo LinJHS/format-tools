@@ -10,15 +10,18 @@ const authStore = useAuthStore()
 
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 const isLoggedIn = computed(() => authStore.isLoggedIn)
-const userName = computed(() => authStore.user?.spec?.displayName || authStore.user?.metadata?.name || '未登录')
-const userEmail = computed(() => authStore.user?.spec?.email || '')
-const membershipLevel = computed(() => {
-  if (!isLoggedIn.value) return '基础版'
-  const level = authStore.subscriptionLevel
-  if (level === 'ultra') return '大师版'
-  if (level === 'pro') return '专业版'
-  return '基础版'
+const userName = computed(() => authStore.user?.displayName || '未登录')
+const userEmail = computed(() => authStore.user?.email || '')
+const userAvatar = computed(() => {
+  const avatar = authStore.user?.avatar || ''
+  if (avatar.startsWith('https://linjhs.com')) {
+    return avatar
+  } else if (avatar) {
+    return `https://linjhs.com${avatar}`
+  }
+  return '/assets/default-avatar.png' // Local fallback image
 })
+const userPhone = computed(() => authStore.user?.phone || '')
 
 const goToLogin = async () => {
   if (authEnabled) {
@@ -59,11 +62,13 @@ const menuItems = [
           <div class="bg-linear-to-r from-purple-600 to-indigo-600 h-20"></div>
           <div class="px-6 pb-6">
             <div class="flex items-end -mt-16">
-              <div class="w-28 h-28 rounded-full bg-white shadow-lg flex items-center justify-center text-4xl border-4 border-white">
-                {{ isLoggedIn ? '👤' : '🔒' }}
-              </div>
+              <img
+                :src="userAvatar"
+                alt="User Avatar"
+                class="w-28 h-28 rounded-full bg-white shadow-lg border-4 border-white object-cover"
+              />
             </div>
-            
+
             <div v-if="!isLoggedIn" class="text-center">
               <h2 class="text-xl font-bold text-gray-900 mb-3">您还未登录</h2>
               <p class="text-gray-600 mb-5 text-sm">登录后可以查看会员信息、转换历史等更多功能</p>
@@ -86,12 +91,7 @@ const menuItems = [
             <div v-else>
               <h2 class="text-xl font-bold text-gray-900 mb-2">{{ userName }}</h2>
               <p class="text-gray-600 mb-3 text-sm">{{ userEmail }}</p>
-              <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-semibold">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                </svg>
-                {{ membershipLevel }}
-              </div>
+              <p class="text-gray-600 mb-3 text-sm">{{ userPhone }}</p>
               <div class="mt-4 flex gap-3">
                 <button 
                   @click="goToShop"
