@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@alicloud/mpserverless-sdk':
-        specifier: ^3.1.5
-        version: 3.1.5
       '@tailwindcss/postcss':
         specifier: ^4.1.18
         version: 4.1.18
@@ -65,10 +62,6 @@ importers:
         version: 2.2.12(typescript@5.6.3)
 
 packages:
-
-  '@alicloud/mpserverless-sdk@3.1.5':
-    resolution: {integrity: sha512-/kPKI9Rjmdcbeds1ShUrwgJWykAAKsNB5Q0vdaGETFUHUolWGkR6dy8MsRDTyfMFT8qs7DxS10WkyAFFQ5e0Zw==}
-    engines: {node: '>=8.0.0'}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -1077,8 +1070,6 @@ packages:
         optional: true
 
 snapshots:
-
-  '@alicloud/mpserverless-sdk@3.1.5': {}
 
   '@alloc/quick-lru@5.2.0': {}
 
