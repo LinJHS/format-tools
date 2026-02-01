@@ -23,6 +23,7 @@ const userAvatar = computed(() => {
 })
 const userPhone = computed(() => authStore.user?.phone || '')
 
+
 const goToLogin = async () => {
   if (authEnabled) {
     router.push('/login')
@@ -38,14 +39,6 @@ const goToShop = async () => {
 const handleLogout = () => {
   authStore.clearAuth()
 }
-
-const menuItems = [
-  { icon: '👤', title: '个人信息', description: '查看和管理您的账户信息' },
-  { icon: '💎', title: '会员中心', description: '升级会员，解锁更多功能' },
-  { icon: '📊', title: '转换历史', description: '查看您的文档转换记录' },
-  { icon: '⚙️', title: '设置', description: '自定义您的使用偏好' },
-  { icon: 'ℹ️', title: '关于我们', description: '了解格式匠的更多信息' },
-]
 </script>
 
 <template>
@@ -59,10 +52,21 @@ const menuItems = [
       <template v-else>
         <!-- User Card -->
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
-          <div class="bg-linear-to-r from-purple-600 to-indigo-600 h-20"></div>
+          <!-- Header (Shared) -->
+          <div class="bg-blue-600 h-24 flex items-center px-6">
+            <!-- Spacer for avatar alignment -->
+            <div class="w-28 mr-4 shrink-0"></div>
+            <!-- Username: Top Right (White Text) -->
+            <div v-if="isLoggedIn">
+              <h2 class="text-2xl font-bold text-white leading-tight">{{ userName }}</h2>
+            </div>
+          </div>
+
+          <!-- Body Content -->
           <div class="px-6 pb-6">
-            <div class="flex items-end -mt-16">
-              <div class="w-28 h-28 rounded-full bg-white shadow-lg border-4 border-white overflow-hidden">
+            <!-- Avatar Row: Overlaps header (-mt-14 aligns center 7rem avatar on line) -->
+            <div class="flex items-end -mt-14 relative z-10">
+              <div class="w-28 h-28 rounded-full bg-white shadow-lg border-4 border-white overflow-hidden shrink-0">
                 <img v-if="userAvatar" :src="userAvatar" alt="User Avatar" class="w-full h-full object-cover" />
                 <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-full h-full text-gray-400">
                   <g fill="#888888" fill-opacity="0" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"
@@ -79,8 +83,26 @@ const menuItems = [
                   </g>
                 </svg>
               </div>
+
+              <!-- Action Buttons (Logged In): Bottom Right -->
+              <div v-if="isLoggedIn" class="ml-4 mb-2">
+                <div class="flex gap-3">
+                  <button @click="goToShop"
+                    class="group relative overflow-hidden bg-linear-to-r from-violet-600 to-fuchsia-600 text-white px-6 py-2 rounded-full font-bold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 text-sm">
+                    <span class="relative z-10 flex items-center gap-1">
+                      <svg class="w-4 h-4 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                      购买会员
+                    </span>
+                  </button>
+                  <button @click="handleLogout"
+                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm border border-gray-200">
+                    退出登录
+                  </button>
+                </div>
+              </div>
             </div>
 
+            <!-- Logged Out Prompt -->
             <div v-if="!isLoggedIn" class="text-center">
               <h2 class="text-xl font-bold text-gray-900 mb-3">您还未登录</h2>
               <p class="text-gray-600 mb-5 text-sm">登录后可以查看会员信息、转换历史等更多功能</p>
@@ -95,44 +117,93 @@ const menuItems = [
                 </button>
               </div>
             </div>
-
-            <div v-else>
-              <h2 class="text-xl font-bold text-gray-900 mb-2">{{ userName }}</h2>
-              <p class="text-gray-600 mb-3 text-sm">{{ userEmail }}</p>
-              <p class="text-gray-600 mb-3 text-sm">{{ userPhone }}</p>
-              <div class="mt-4 flex gap-3">
-                <button @click="goToShop"
-                  class="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors">
-                  会员中心
-                </button>
-                <button @click="handleLogout"
-                  class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
-                  退出登录
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
-        <!-- Menu Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="(item, index) in menuItems" :key="index"
-            class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer p-5 transform hover:-translate-y-1"
-            @click="item.title === '会员中心' ? goToShop() : null">
-            <div class="flex items-start">
-              <div class="text-3xl mr-3">{{ item.icon }}</div>
-              <div class="flex-1">
-                <h3 class="text-base font-semibold text-gray-900 mb-1">
-                  {{ item.title }}
-                </h3>
-                <p class="text-gray-600 text-sm">
-                  {{ item.description }}
-                </p>
-              </div>
-              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        <!-- Menu List -->
+        <div class="flex flex-col gap-3">
+          <!-- Item: Personal Info -->
+          <div
+            class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 flex items-center"
+            @click="isLoggedIn ? null : goToLogin()">
+            <div class="text-gray-500 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
+            <div class="flex-1 font-semibold text-gray-900">个人信息</div>
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+
+          <!-- Item: Member Center -->
+          <div
+            class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 flex items-center"
+            @click="goToShop">
+            <div class="text-gray-500 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </div>
+            <div class="flex-1 font-semibold text-gray-900">会员中心</div>
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+
+          <!-- Item: History -->
+          <div
+            class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 flex items-center">
+            <div class="text-gray-500 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1 font-semibold text-gray-900">转换历史</div>
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+
+          <!-- Item: Settings -->
+          <div
+            class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 flex items-center">
+            <div class="text-gray-500 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div class="flex-1 font-semibold text-gray-900">设置</div>
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+
+          <!-- Item: About Us -->
+          <div
+            class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 flex items-center">
+            <div class="text-gray-500 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1 font-semibold text-gray-900">关于我们</div>
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
           </div>
         </div>
 

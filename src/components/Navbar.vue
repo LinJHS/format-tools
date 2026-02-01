@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 
 const navigateTo = (path: string) => {
   router.push(path)
 }
+
+const navClass = computed(() => {
+  return 'relative bg-blue-600'
+})
 </script>
 
 <template>
-  <nav class="bg-linear-to-r from-purple-600 to-indigo-600 shadow-lg">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <nav :class="navClass">
+    <div 
+      class="absolute inset-0 bg-linear-to-r from-purple-600 to-indigo-600 transition-opacity duration-500 ease-in-out pointer-events-none"
+      :class="route.path === '/' ? 'opacity-100' : 'opacity-0'"
+    ></div>
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-14">
         <div class="flex items-center">
           <button @click="navigateTo('/')" class="flex items-center space-x-2">
