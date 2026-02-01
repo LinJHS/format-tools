@@ -11,7 +11,6 @@ const authStore = useAuthStore()
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const userName = computed(() => authStore.user?.displayName || '未登录')
-const userEmail = computed(() => authStore.user?.email || '')
 const userAvatar = computed(() => {
   const avatar = authStore.user?.avatar || ''
   if (avatar.startsWith('https://linjhs.com')) {
@@ -19,10 +18,25 @@ const userAvatar = computed(() => {
   } else if (avatar) {
     return `https://linjhs.com${avatar}`
   }
-  return '' // Empty string for fallback to SVG
+  return ''
 })
-const userPhone = computed(() => authStore.user?.phone || '')
 
+const activeMembership = computed(() => authStore.activeMembership)
+
+const membershipBadge = computed(() => {
+  if (!activeMembership.value) return null
+  if (activeMembership.value.membershipType === 'ultra') {
+    return { label: '大师版', color: 'bg-gradient-to-r from-amber-400 to-amber-600' }
+  }
+  if (activeMembership.value.membershipType === 'pro') {
+    return { label: '专业版', color: 'bg-gradient-to-r from-blue-500 to-blue-600' }
+  }
+  return null
+})
+
+const buttonLabel = computed(() => {
+  return activeMembership.value ? '续费会员' : '购买会员'
+})
 
 const goToLogin = async () => {
   if (authEnabled) {
@@ -36,8 +50,13 @@ const goToShop = async () => {
   await openUrl(LINKS.shop)
 }
 
-const handleLogout = () => {
+const navigateTo = (path: string) => {
+  router.push(path)
+}
+
+const handleLogout = async () => {
   authStore.clearAuth()
+  router.push('/profile')
 }
 </script>
 
@@ -57,7 +76,10 @@ const handleLogout = () => {
             <!-- Spacer for avatar alignment -->
             <div class="w-28 mr-4 shrink-0"></div>
             <!-- Username: Top Right (White Text) -->
-            <div v-if="isLoggedIn">
+            <div v-if="isLoggedIn" class="flex items-center gap-3">
+              <div v-if="membershipBadge" :class="`${membershipBadge.color} px-3 py-1 rounded-full text-white font-bold text-sm`">
+                {{ membershipBadge.label }}
+              </div>
               <h2 class="text-2xl font-bold text-white leading-tight">{{ userName }}</h2>
             </div>
           </div>
@@ -86,19 +108,13 @@ const handleLogout = () => {
 
               <!-- Action Buttons (Logged In): Bottom Right -->
               <div v-if="isLoggedIn" class="ml-4 mb-2">
-                <div class="flex gap-3">
-                  <button @click="goToShop"
-                    class="group relative overflow-hidden bg-linear-to-r from-violet-600 to-fuchsia-600 text-white px-6 py-2 rounded-full font-bold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 text-sm">
-                    <span class="relative z-10 flex items-center gap-1">
-                      <svg class="w-4 h-4 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                      购买会员
-                    </span>
-                  </button>
-                  <button @click="handleLogout"
-                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm border border-gray-200">
-                    退出登录
-                  </button>
-                </div>
+                <button @click="goToShop"
+                  class="group relative overflow-hidden bg-linear-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-1.5 rounded-full font-semibold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 text-xs">
+                  <span class="relative z-10 flex items-center gap-1">
+                    <svg class="w-3 h-3 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    {{ buttonLabel }}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -125,7 +141,7 @@ const handleLogout = () => {
           <!-- Item: Personal Info -->
           <div
             class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 flex items-center"
-            @click="isLoggedIn ? null : goToLogin()">
+            @click="navigateTo('/personal-info')">
             <div class="text-gray-500 mr-4">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
@@ -142,7 +158,7 @@ const handleLogout = () => {
           <!-- Item: Member Center -->
           <div
             class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 flex items-center"
-            @click="goToShop">
+            @click="navigateTo('/membership-center')">
             <div class="text-gray-500 mr-4">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
@@ -244,3 +260,4 @@ const handleLogout = () => {
 </template>
 
 <style scoped></style>
+

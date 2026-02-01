@@ -5,4 +5,5 @@ export const LINKS = {
   signup:
     "https://linjhs.com/signup?redirect_uri=https%3A%2F%2Flinjhs.com%2Fshop%2Fproduct%2F2",
   shop: "https://linjhs.com/shop/product/2",
+  uc: "https://linjhs.com/uc/profile",
 } as const;
