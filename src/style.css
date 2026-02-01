@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+@source "../src/**/*.vue";
+@source "../src/**/*.ts";
+@source "../src/auth-private";
+
 @layer base {
   /* Custom Scrollbar for Webkit (Chrome, Edge, Safari) */
   ::-webkit-scrollbar {

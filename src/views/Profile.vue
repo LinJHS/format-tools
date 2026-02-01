@@ -11,6 +11,11 @@ const authStore = useAuthStore()
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const userName = computed(() => authStore.user?.displayName || '未登录')
+const userId = computed(() => {
+  if (!authStore.user) return ''
+  // Try common ID fields
+  return authStore.user.userId || ''
+})
 const userAvatar = computed(() => {
   const avatar = authStore.user?.avatar || ''
   if (avatar.startsWith('https://linjhs.com')) {
@@ -61,7 +66,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="profile-container min-h-screen bg-gray-50 py-6">
+  <div class="profile-container min-h-[calc(100vh-56px)] bg-gray-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div v-if="!authEnabled" class="bg-white rounded-2xl shadow-lg p-10 text-center text-gray-700">
         <h2 class="text-xl font-bold mb-3">当前为开源版本</h2>
@@ -76,11 +81,17 @@ const handleLogout = async () => {
             <!-- Spacer for avatar alignment -->
             <div class="w-28 mr-4 shrink-0"></div>
             <!-- Username: Top Right (White Text) -->
-            <div v-if="isLoggedIn" class="flex items-center gap-3">
-              <div v-if="membershipBadge" :class="`${membershipBadge.color} px-3 py-1 rounded-full text-white font-bold text-sm`">
-                {{ membershipBadge.label }}
+            <div v-if="isLoggedIn" class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-3">
+                <div v-if="membershipBadge" :class="`${membershipBadge.color} px-3 py-1 rounded-full text-white font-bold text-sm`">
+                  {{ membershipBadge.label }}
+                </div>
+                <h2 class="text-2xl font-bold text-white leading-tight">{{ userName }}</h2>
+                
+                <div v-if="userId" class="text-xs text-white/70 pl-1 pt-3 font-mono">
+                  UID: {{ userId }}
+                </div>
               </div>
-              <h2 class="text-2xl font-bold text-white leading-tight">{{ userName }}</h2>
             </div>
           </div>
 
@@ -107,7 +118,7 @@ const handleLogout = async () => {
               </div>
 
               <!-- Action Buttons (Logged In): Bottom Right -->
-              <div v-if="isLoggedIn" class="ml-4 mb-2">
+              <div v-if="isLoggedIn" class="ml-4 mb-2 flex items-center gap-3">
                 <button @click="goToShop"
                   class="group relative overflow-hidden bg-linear-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-1.5 rounded-full font-semibold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 text-xs">
                   <span class="relative z-10 flex items-center gap-1">
@@ -115,6 +126,10 @@ const handleLogout = async () => {
                     {{ buttonLabel }}
                   </span>
                 </button>
+                <span v-if="activeMembership" class="text-xs text-gray-500 font-medium">
+                  {{ new Date(activeMembership.endDate).toLocaleDateString('zh-CN') }} 到期
+                </span>
+                <span v-else class="text-xs text-gray-400">暂无会员</span>
               </div>
             </div>
 
