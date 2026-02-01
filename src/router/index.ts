@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { loadAuthRoutes } from '../auth/authLoader'
+import { loadAuthRoutes, initAuthState } from '../auth/authLoader'
 
 const routes = [
   {
@@ -37,5 +37,8 @@ const router = createRouter({
 
 // Dynamically load private auth routes when enabled and present
 loadAuthRoutes(router)
+
+// Initialize auth state from localStorage on app start
+initAuthState()
 
 export default router
