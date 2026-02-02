@@ -145,7 +145,7 @@ const handleLogout = async () => {
             </div>
 
             <!-- Logged Out Prompt -->
-            <div v-if="!isLoggedIn" class="text-center">
+            <div v-if="!isLoggedIn" class="text-center -mt-12">
               <h2 class="text-xl font-bold text-gray-900 mb-3">您还未登录</h2>
               <p class="text-gray-600 mb-5 text-sm">登录后可以查看会员信息、转换历史等更多功能</p>
               <div class="flex gap-3 justify-center">
