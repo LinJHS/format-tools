@@ -150,7 +150,7 @@ const handleLogout = async () => {
               <p class="text-gray-600 mb-5 text-sm">登录后可以查看会员信息、转换历史等更多功能</p>
               <div class="flex gap-3 justify-center">
                 <button @click="goToLogin"
-                  class="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors">
+                  class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
                   立即登录
                 </button>
                 <button @click="async () => await openUrl(LINKS.signup)"
