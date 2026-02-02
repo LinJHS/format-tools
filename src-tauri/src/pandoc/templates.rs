@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
+use tauri::path::BaseDirectory;
 use aes::Aes256;
 use cbc::Decryptor;
 use cipher::{KeyIvInit, block_padding::Pkcs7, BlockDecryptMut};
@@ -22,7 +23,7 @@ struct TemplateResource {
 
 pub fn prepare_template(app_handle: &AppHandle, template_name: &str) -> Result<TemplateInfo, String> {
     // Try to find template in resources
-    let resource = find_template_resource(template_name)?;
+    let resource = find_template_resource(app_handle, template_name)?;
 
     let cache_root = app_handle
         .path()
@@ -59,56 +60,90 @@ pub fn prepare_template(app_handle: &AppHandle, template_name: &str) -> Result<T
     })
 }
 
-fn find_template_resource(template_name: &str) -> Result<TemplateResource, String> {
-    // 1. Try to find template in the current executable directory
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            let resource_path = exe_dir.join("resources").join("templates").join(template_name);
-            if resource_path.exists() {
-                return Ok(TemplateResource { path: resource_path, encrypted: false });
-            }
+fn find_template_resource(app_handle: &AppHandle, template_id: &str) -> Result<TemplateResource, String> {
+    // Determine the expected filename (assuming .docx extension)
+    let filename = template_id.to_string();
 
-            let protected_path = exe_dir.join("resources").join("auth-private").join("templates").join(template_name);
-            if protected_path.exists() {
-                return Ok(TemplateResource { path: protected_path, encrypted: true });
-            }
+    // 1. Development Environment: Check project root relative paths
+    // Unified directory: resources/templates
+    let dev_candidates = [
+        PathBuf::from("src-tauri/resources/templates").join(&filename),
+        PathBuf::from("resources/templates").join(&filename),
+    ];
+
+    for path in &dev_candidates {
+        if path.exists() {
+            let encrypted = get_template_member_flag(app_handle, template_id).unwrap_or(false);
+            return Ok(TemplateResource { path: path.clone(), encrypted });
         }
     }
 
-    // 2. Try to find template relative to project root (for development)
+    // 2. Production Environment: Check Resource directory
+    // In production, everything is in the 'templates' subdirectory of resources
+    let resource_path = app_handle
+        .path()
+        .resolve(Path::new("templates").join(&filename), BaseDirectory::Resource)
+        .ok();
+        
+    if let Some(path) = resource_path {
+        if path.exists() {
+            let encrypted = get_template_member_flag(app_handle, template_id).unwrap_or(false);
+            return Ok(TemplateResource { path, encrypted });
+        }
+    }
+
+    Err(format!("Template '{}' not found in resources/templates", template_id))
+}
+
+fn parse_ts_object(content: &str) -> Result<serde_json::Value, String> {
+    let start = content.find('{').ok_or("No JSON object start found in metadata")?;
+    let end = content.rfind('}').ok_or("No JSON object end found in metadata")?;
+    if end <= start {
+        return Err("Invalid metadata object boundaries".to_string());
+    }
+    let json_like = &content[start..=end];
+    serde_json::from_str(json_like)
+        .map_err(|e| format!("Invalid JSON content in metadata: {}", e))
+}
+
+fn load_metadata_from_candidates(candidates: &[PathBuf]) -> Result<Vec<TemplateMeta>, String> {
+    for path in candidates {
+        if path.exists() {
+            let content = fs::read_to_string(path)
+                .map_err(|e| format!("Failed to read metadata: {}", e))?;
+            let parsed = parse_ts_object(&content)?;
+            let templates_val = if parsed.is_object() {
+                parsed.get("templates").cloned().unwrap_or(serde_json::Value::Array(vec![]))
+            } else {
+                parsed
+            };
+            let list: Vec<TemplateMeta> = serde_json::from_value(templates_val)
+                .map_err(|e| format!("Failed to parse templates: {}", e))?;
+            return Ok(list);
+        }
+    }
+
+    Ok(vec![])
+}
+
+fn get_template_member_flag(app_handle: &AppHandle, template_name: &str) -> Option<bool> {
     let candidates = [
-        "src-tauri/resources/templates",
-        "resources/templates",
-        "../resources/templates",
+        PathBuf::from("src-tauri/resources/templates/templates.ts"),
+        PathBuf::from("resources/templates/templates.ts"),
+        app_handle
+            .path()
+            .resolve("templates/templates.ts", BaseDirectory::Resource)
+            .unwrap_or_default(),
     ];
 
-    for base in &candidates {
-        let path = Path::new(base).join(template_name);
-        if path.exists() {
-            if let Ok(canonical) = path.canonicalize() {
-                return Ok(TemplateResource { path: canonical, encrypted: false });
-            }
-            return Ok(TemplateResource { path, encrypted: false });
-        }
+    if let Ok(list) = load_metadata_from_candidates(&candidates) {
+        return list
+            .into_iter()
+            .find(|t| t.id == template_name)
+            .map(|t| t.member);
     }
 
-    let protected_candidates = [
-        "src/auth-private/templates",
-        "auth-private/templates",
-        "../auth-private/templates",
-    ];
-
-    for base in &protected_candidates {
-        let path = Path::new(base).join(template_name);
-        if path.exists() {
-            if let Ok(canonical) = path.canonicalize() {
-                return Ok(TemplateResource { path: canonical, encrypted: true });
-            }
-            return Ok(TemplateResource { path, encrypted: true });
-        }
-    }
-
-    Err(format!("Template '{}' not found in resources", template_name))
+    None
 }
 
 #[allow(non_snake_case)]
@@ -131,87 +166,20 @@ pub struct TemplateListResponse {
     pub has_premium: bool,
 }
 
-pub fn list_templates(_app_handle: &AppHandle) -> Result<TemplateListResponse, String> {
-    // Locate templates metadata file in resources/templates/templates.json
-    let metadata_candidates = [
-        // exe dir resources
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("resources").join("templates").join("templates.json"))),
-        // dev paths
-        Some(PathBuf::from("src-tauri/resources/templates/templates.json")),
-        Some(PathBuf::from("resources/templates/templates.json")),
-        Some(PathBuf::from("../resources/templates/templates.json")),
-    ];
-
-    let protected_metadata_candidates = [
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("resources").join("auth-private").join("templates").join("templates.json.enc"))),
-        Some(PathBuf::from("src/auth-private/templates/templates.json.enc")),
-        Some(PathBuf::from("auth-private/templates/templates.json.enc")),
-        Some(PathBuf::from("../auth-private/templates/templates.json.enc")),
-    ];
-
+pub fn list_templates(app_handle: &AppHandle) -> Result<TemplateListResponse, String> {
     let mut all_templates: Vec<TemplateMeta> = vec![];
-    let mut has_premium = false;
 
-    for opt_path in metadata_candidates.iter().flatten() {
-        if opt_path.exists() {
-            let content = fs::read_to_string(opt_path)
-                .map_err(|e| format!("Failed to read metadata: {}", e))?;
-            let parsed: serde_json::Value = serde_json::from_str(&content)
-                .map_err(|e| format!("Invalid JSON in metadata: {}", e))?;
-            let templates_val = if parsed.is_object() {
-                parsed.get("templates").cloned().unwrap_or(serde_json::Value::Array(vec![]))
-            } else {
-                parsed
-            };
-            let mut list: Vec<TemplateMeta> = serde_json::from_value(templates_val)
-                .map_err(|e| format!("Failed to parse templates: {}", e))?;
-            all_templates.append(&mut list);
-            break;
-        }
+    let free_candidates = [
+        PathBuf::from("src-tauri/resources/templates/templates.ts"),
+        PathBuf::from("resources/templates/templates.ts"),
+        app_handle.path().resolve("templates/templates.ts", BaseDirectory::Resource).unwrap_or_default(),
+    ];
+
+    if let Ok(mut list) = load_metadata_from_candidates(&free_candidates) {
+        all_templates.append(&mut list);
     }
 
-    for opt_path in protected_metadata_candidates.iter().flatten() {
-        if opt_path.exists() {
-            has_premium = true;
-            let encrypted = match fs::read(opt_path) {
-                Ok(bytes) => bytes,
-                Err(_) => continue,
-            };
-
-            let decrypted = match decrypt_bytes_aes_cbc(&encrypted) {
-                Ok(bytes) => bytes,
-                Err(_) => continue,
-            };
-
-            let content = match String::from_utf8(decrypted) {
-                Ok(text) => text,
-                Err(_) => continue,
-            };
-
-            let parsed: serde_json::Value = match serde_json::from_str(&content) {
-                Ok(val) => val,
-                Err(_) => continue,
-            };
-
-            let templates_val = if parsed.is_object() {
-                parsed.get("templates").cloned().unwrap_or(serde_json::Value::Array(vec![]))
-            } else {
-                parsed
-            };
-
-            let mut list: Vec<TemplateMeta> = match serde_json::from_value(templates_val) {
-                Ok(v) => v,
-                Err(_) => continue,
-            };
-
-            all_templates.append(&mut list);
-            break;
-        }
-    }
+    let has_premium = all_templates.iter().any(|t| t.member);
 
     if all_templates.is_empty() {
         Err("No templates metadata found in resources".to_string())

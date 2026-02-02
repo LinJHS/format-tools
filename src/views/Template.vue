@@ -182,6 +182,10 @@ const handlePresetDialogClose = () => {
 const openDownloadPage = async () => {
   await openUrl(LINKS.releases)
 }
+
+const isSelected = (template: TemplateMeta) => {
+  return selectedTemplate.value?.id === template.id
+}
 </script>
 
 <template>
@@ -201,18 +205,19 @@ const openDownloadPage = async () => {
           v-for="template in freeTemplates"
           :key="template.id"
           @click="selectTemplate(template)"
-          class="bg-white border-2 border-[#e5e7eb] rounded-2xl p-5 cursor-pointer transition-all flex flex-col shadow-sm hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
-          :class="{ 'border-[#7c3aed] bg-[#faf5ff] shadow-[0_4px_20px_rgba(124,58,237,0.2)]': selectedTemplate?.id === template.id }"
+          class="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 cursor-pointer transition-all flex flex-col shadow-sm hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
+          :class="[isSelected(template) ? 'border-[#7c3aed]! bg-[#faf5ff]! shadow-[0_4px_20px_rgba(124,58,237,0.2)]!' : '']"
         >
-          <div class="flex items-start justify-between mb-3">
-            <div class="text-xs bg-[#dcfce7] text-[#166534] px-2 py-1 rounded-md font-semibold">免费</div>
+          <div v-if="isSelected(template)" class="h-3 flex justify-end -mb-3">
+            <div class="text-[#16a34a] font-bold text-sm">✓ 已选择</div>
           </div>
           <div class="flex-1">
-            <h3 class="m-0 mb-2 text-[#111827] text-lg font-bold">{{ template.name }}</h3>
+            <h3 class="m-0 mb-2 text-[#111827] text-lg font-bold flex items-center gap-2">
+              <span
+              class="text-xs bg-[#dcfce7] text-[#166534] px-2 py-1 rounded-md font-semibold">免费</span>
+              {{ template.name }}
+            </h3>
             <p class="m-0 text-[#6b7280] text-[13px] leading-relaxed">{{ template.description }}</p>
-          </div>
-          <div class="mt-3 pt-3 border-t border-[#e5e7eb]">
-            <div v-if="selectedTemplate?.id === template.id" class="text-[#16a34a] font-bold text-sm">✓ 已选择</div>
           </div>
         </div>
       </div>
@@ -225,18 +230,18 @@ const openDownloadPage = async () => {
           v-for="template in memberTemplates"
           :key="template.id"
           @click="selectTemplate(template)"
-          class="bg-white border-2 border-[#e5e7eb] rounded-2xl p-5 cursor-pointer transition-all flex flex-col shadow-sm hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
-          :class="{ 'border-[#7c3aed] bg-[#faf5ff] shadow-[0_4px_20px_rgba(124,58,237,0.2)]': selectedTemplate?.id === template.id }"
+          class="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 cursor-pointer transition-all flex flex-col shadow-sm hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
+          :class="[isSelected(template) ? 'border-[#7c3aed]! bg-[#faf5ff]! shadow-[0_4px_20px_rgba(124,58,237,0.2)]!' : '']"
         >
-          <div class="flex items-start justify-between mb-3">
-            <div class="text-xs bg-[#ede9fe] text-[#6d28d9] px-2 py-1 rounded-md font-semibold">会员</div>
+          <div v-if="isSelected(template)" class="h-3 flex justify-end -mb-3">
+            <div class="text-[#16a34a] font-bold text-sm">✓ 已选择</div>
           </div>
           <div class="flex-1">
-            <h3 class="m-0 mb-2 text-[#111827] text-lg font-bold">{{ template.name }}</h3>
+            <h3 class="m-0 mb-2 text-[#111827] text-lg font-bold flex items-center gap-2">
+              <span class="text-xs bg-[#ede9fe] text-[#6d28d9] px-2 py-1 rounded-md font-semibold">会员</span>
+              {{ template.name }}
+            </h3>
             <p class="m-0 text-[#6b7280] text-[13px] leading-relaxed">{{ template.description }}</p>
-          </div>
-          <div class="mt-3 pt-3 border-t border-[#e5e7eb]">
-            <div v-if="selectedTemplate?.id === template.id" class="text-[#16a34a] font-bold text-sm">✓ 已选择</div>
           </div>
         </div>
       </div>
