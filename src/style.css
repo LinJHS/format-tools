@@ -5,6 +5,18 @@
 @source "../src/auth-private";
 
 @layer base {
+  /* Disable text selection globally for UI elements */
+  body {
+    @apply select-none;
+  }
+
+  /* Allow text selection in input, textarea, and contenteditable elements */
+  input,
+  textarea,
+  [contenteditable] {
+    @apply select-text;
+  }
+
   /* Custom Scrollbar for Webkit (Chrome, Edge, Safari) */
   ::-webkit-scrollbar {
     width: 6px;

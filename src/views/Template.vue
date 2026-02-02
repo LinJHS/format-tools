@@ -126,8 +126,12 @@ const goBack = () => {
   router.push('/upload')
 }
 
-const templatesByCategory = computed(() => {
-  return templates.value
+const freeTemplates = computed(() => {
+  return templates.value.filter((t) => !t.member)
+})
+
+const memberTemplates = computed(() => {
+  return templates.value.filter((t) => t.member)
 })
 
 // 配置对话框事件处理
@@ -185,15 +189,14 @@ const handlePresetDialogClose = () => {
       <h2 class="text-lg font-bold text-[#1f2937] m-0 mb-4">免费模板</h2>
       <div class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         <div
-          v-for="template in templatesByCategory"
+          v-for="template in freeTemplates"
           :key="template.id"
           @click="selectTemplate(template)"
           class="bg-white border-2 border-[#e5e7eb] rounded-2xl p-5 cursor-pointer transition-all flex flex-col shadow-sm hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
           :class="{ 'border-[#7c3aed] bg-[#faf5ff] shadow-[0_4px_20px_rgba(124,58,237,0.2)]': selectedTemplate?.id === template.id }"
         >
           <div class="flex items-start justify-between mb-3">
-            <div class="text-3xl">{{ template.icon }}</div>
-            <div v-if="template.isFree" class="bg-[#dcfce7] text-[#166534] px-2 py-1 rounded-md text-[11px] font-semibold">免费</div>
+            <div class="text-xs bg-[#dcfce7] text-[#166534] px-2 py-1 rounded-md font-semibold">免费</div>
           </div>
           <div class="flex-1">
             <h3 class="m-0 mb-2 text-[#111827] text-lg font-bold">{{ template.name }}</h3>
@@ -206,9 +209,29 @@ const handlePresetDialogClose = () => {
       </div>
     </section>
 
-    <section class="opacity-60 max-w-6xl mx-auto mb-8">
-      <h2 class="text-lg font-bold text-[#1f2937] m-0 mb-4">高级模板</h2>
-      <div class="bg-[linear-gradient(135deg,#f5f7ff,#ede9fe)] border-2 border-dashed border-[#c7d2fe] rounded-2xl p-10 text-center text-[#7c3aed]">
+    <section class="max-w-6xl mx-auto mb-8">
+      <h2 class="text-lg font-bold text-[#1f2937] m-0 mb-4">会员模板</h2>
+      <div v-if="memberTemplates.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+        <div
+          v-for="template in memberTemplates"
+          :key="template.id"
+          @click="selectTemplate(template)"
+          class="bg-white border-2 border-[#e5e7eb] rounded-2xl p-5 cursor-pointer transition-all flex flex-col shadow-sm hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
+          :class="{ 'border-[#7c3aed] bg-[#faf5ff] shadow-[0_4px_20px_rgba(124,58,237,0.2)]': selectedTemplate?.id === template.id }"
+        >
+          <div class="flex items-start justify-between mb-3">
+            <div class="text-xs bg-[#ede9fe] text-[#6d28d9] px-2 py-1 rounded-md font-semibold">会员</div>
+          </div>
+          <div class="flex-1">
+            <h3 class="m-0 mb-2 text-[#111827] text-lg font-bold">{{ template.name }}</h3>
+            <p class="m-0 text-[#6b7280] text-[13px] leading-relaxed">{{ template.description }}</p>
+          </div>
+          <div class="mt-3 pt-3 border-t border-[#e5e7eb]">
+            <div v-if="selectedTemplate?.id === template.id" class="text-[#16a34a] font-bold text-sm">✓ 已选择</div>
+          </div>
+        </div>
+      </div>
+      <div v-else class="bg-[linear-gradient(135deg,#f5f7ff,#ede9fe)] border-2 border-dashed border-[#c7d2fe] rounded-2xl p-10 text-center text-[#7c3aed]">
         <div class="text-5xl mb-3">🚀</div>
         <p class="m-0 font-semibold">敬请期待更多专业模板</p>
         <p class="m-0 mt-1 text-[#a78bfa] text-xs">登录后可解锁高级模板</p>

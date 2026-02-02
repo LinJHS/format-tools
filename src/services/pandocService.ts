@@ -44,11 +44,8 @@ export interface TemplateMeta {
   id: string
   name: string
   description: string
-  icon?: string
-  category?: string
-  tags?: string[]
-  isFree?: boolean
-  isPro?: boolean
+  category: string
+  member: boolean
   defaultPreset?: Partial<TemplateConfig>
 }
 

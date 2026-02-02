@@ -59,10 +59,6 @@ const navigateTo = (path: string) => {
   router.push(path)
 }
 
-const handleLogout = async () => {
-  authStore.clearAuth()
-  router.push('/profile')
-}
 </script>
 
 <template>
@@ -253,7 +249,7 @@ const handleLogout = async () => {
 
         <!-- Quick Actions for Non-logged Users -->
         <div v-if="!isLoggedIn"
-          class="mt-6 bg-linear-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-100">
+          class="mt-6 bg-linear-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
           <h3 class="text-lg font-bold text-gray-900 mb-3">快速链接</h3>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <a :href="LINKS.login" target="_blank"
