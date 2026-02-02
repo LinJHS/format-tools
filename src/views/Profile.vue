@@ -31,10 +31,10 @@ const activeMembership = computed(() => authStore.activeMembership)
 const membershipBadge = computed(() => {
   if (!activeMembership.value) return null
   if (activeMembership.value.membershipType === 'ultra') {
-    return { label: '大师版', color: 'bg-gradient-to-r from-amber-400 to-amber-600' }
+    return { label: '大师版', color: 'bg-linear-to-r from-amber-400 to-amber-600' }
   }
   if (activeMembership.value.membershipType === 'pro') {
-    return { label: '专业版', color: 'bg-gradient-to-r from-blue-500 to-blue-600' }
+    return { label: '专业版', color: 'bg-linear-to-r from-amber-400 to-amber-600' }
   }
   return null
 })
@@ -77,7 +77,7 @@ const handleLogout = async () => {
         <!-- User Card -->
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
           <!-- Header (Shared) -->
-          <div class="bg-blue-600 h-24 flex items-center px-6">
+          <div class="bg-blue-600 h-16 flex items-center px-6">
             <!-- Spacer for avatar alignment -->
             <div class="w-28 mr-4 shrink-0"></div>
             <!-- Username: Top Right (White Text) -->
@@ -96,9 +96,9 @@ const handleLogout = async () => {
           </div>
 
           <!-- Body Content -->
-          <div class="px-6 pb-6">
+          <div class="px-6 pb-8">
             <!-- Avatar Row: Overlaps header (-mt-14 aligns center 7rem avatar on line) -->
-            <div class="flex items-end -mt-14 relative z-10">
+            <div class="flex items-end -mt-10 relative z-10">
               <div class="w-28 h-28 rounded-full bg-white shadow-lg border-4 border-white overflow-hidden shrink-0">
                 <img v-if="userAvatar" :src="userAvatar" alt="User Avatar" class="w-full h-full object-cover" />
                 <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-full h-full text-gray-400">
@@ -118,18 +118,29 @@ const handleLogout = async () => {
               </div>
 
               <!-- Action Buttons (Logged In): Bottom Right -->
-              <div v-if="isLoggedIn" class="ml-4 mb-2 flex items-center gap-3">
-                <button @click="goToShop"
-                  class="group relative overflow-hidden bg-linear-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-1.5 rounded-full font-semibold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 text-xs">
-                  <span class="relative z-10 flex items-center gap-1">
-                    <svg class="w-3 h-3 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    {{ buttonLabel }}
+              <div v-if="isLoggedIn" class="flex-1 ml-4 mb-2 flex items-end justify-between pb-1">
+                <!-- Left: Status/Expiry -->
+                <div class="mb-6 ml-2">
+                  <span v-if="activeMembership" class="text-[14px] text-gray-500 font-medium">
+                    {{ new Date(activeMembership.endDate).toLocaleDateString('zh-CN') }} 到期
                   </span>
-                </button>
-                <span v-if="activeMembership" class="text-xs text-gray-500 font-medium">
-                  {{ new Date(activeMembership.endDate).toLocaleDateString('zh-CN') }} 到期
-                </span>
-                <span v-else class="text-xs text-gray-400">暂无会员</span>
+                  <span v-else class="text-[14px] text-gray-500">暂无会员</span>
+                </div>
+
+                <!-- Right: Button & Link -->
+                <div class="flex flex-col items-end gap-1">
+                  <button @click="goToShop"
+                    class="group relative overflow-hidden bg-linear-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-1.5 rounded-full font-semibold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 text-[14px]">
+                    <span class="relative z-10 flex items-center gap-1">
+                      <svg class="w-3 h-3 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                      {{ buttonLabel }}
+                    </span>
+                  </button>
+                  <div @click="navigateTo('/membership-center')" class="mt-1 -mb-6 text-[12px] text-gray-500 hover:text-blue-600 cursor-pointer flex items-center gap-0.5 transition-colors pr-1">
+                    5项专属权益
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -152,7 +163,7 @@ const handleLogout = async () => {
         </div>
 
         <!-- Menu List -->
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="bg-white rounded-md shadow-md overflow-hidden">
           <div class="divide-y divide-gray-200">
             <!-- Item: Personal Info -->
             <div

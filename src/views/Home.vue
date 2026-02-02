@@ -176,7 +176,7 @@ const goToRegister = async () => {
                   <span class="text-gray-700">基础模板</span>
                 </li>
               </ul>
-              <button class="w-full bg-gray-200 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+              <button @click="startConvert" class="w-full bg-gray-200 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
                 免费使用
               </button>
             </div>
@@ -215,7 +215,7 @@ const goToRegister = async () => {
                 </li>
               </ul>
               <button 
-                @click="async () => await openUrl('https://linjhs.com/shop/products')"
+                @click="async () => await openUrl(LINKS.shop)"
                 class="w-full bg-purple-600 text-white py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
               >
                 立即购买
@@ -253,7 +253,7 @@ const goToRegister = async () => {
                 </li>
               </ul>
               <button 
-                @click="async () => await openUrl('https://linjhs.com/shop/products')"
+                @click="async () => await openUrl(LINKS.shop)"
                 class="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
               >
                 立即购买
