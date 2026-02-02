@@ -11,7 +11,7 @@
     },
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://linjhs.com/**" }]
+      "allow": [{ "url": "https://linjhs.com/**" },{ "url": "https://github.com/linjhs/**" }]
     },
     {
       "identifier": "opener:allow-reveal-item-in-dir",
