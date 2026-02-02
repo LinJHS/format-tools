@@ -125,7 +125,13 @@ pub struct TemplateMeta {
     pub defaultPreset: serde_json::Value,
 }
 
-pub fn list_templates(_app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, String> {
+#[derive(Debug, Clone, Serialize)]
+pub struct TemplateListResponse {
+    pub templates: Vec<TemplateMeta>,
+    pub has_premium: bool,
+}
+
+pub fn list_templates(_app_handle: &AppHandle) -> Result<TemplateListResponse, String> {
     // Locate templates metadata file in resources/templates/templates.json
     let metadata_candidates = [
         // exe dir resources
@@ -148,6 +154,7 @@ pub fn list_templates(_app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, Stri
     ];
 
     let mut all_templates: Vec<TemplateMeta> = vec![];
+    let mut has_premium = false;
 
     for opt_path in metadata_candidates.iter().flatten() {
         if opt_path.exists() {
@@ -169,6 +176,7 @@ pub fn list_templates(_app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, Stri
 
     for opt_path in protected_metadata_candidates.iter().flatten() {
         if opt_path.exists() {
+            has_premium = true;
             let encrypted = match fs::read(opt_path) {
                 Ok(bytes) => bytes,
                 Err(_) => continue,
@@ -208,7 +216,10 @@ pub fn list_templates(_app_handle: &AppHandle) -> Result<Vec<TemplateMeta>, Stri
     if all_templates.is_empty() {
         Err("No templates metadata found in resources".to_string())
     } else {
-        Ok(all_templates)
+        Ok(TemplateListResponse {
+            templates: all_templates,
+            has_premium,
+        })
     }
 }
 

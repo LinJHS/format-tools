@@ -3,8 +3,8 @@
   "templates": [
     {
       "id": "default",
-      "name": "¾­µäÄ£°å",
-      "description": "Ä¬ÈÏ Word Ä£°å£¬Ê²Ã´ÑùÊ½¶¼Ã»ÓĞ¡£",
+      "name": "ç»å…¸æ¨¡æ¿",
+      "description": "é»˜è®¤ Word æ¨¡æ¿ï¼Œä»€ä¹ˆæ ·å¼éƒ½æ²¡æœ‰ã€‚",
       "category": "free",
       "member": false,
       "defaultPreset": {

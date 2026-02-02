@@ -49,6 +49,11 @@ export interface TemplateMeta {
   defaultPreset?: Partial<TemplateConfig>
 }
 
+export interface TemplateListResponse {
+  templates: TemplateMeta[]
+  has_premium: boolean
+}
+
 export interface DownloadProgress {
   downloaded: number
   total: number
@@ -164,7 +169,7 @@ export const pandocService = {
   /**
    * 获取模板列表元数据
    */
-  async getTemplates(): Promise<TemplateMeta[]> {
-    return await invoke<TemplateMeta[]>('list_templates')
+  async getTemplates(): Promise<TemplateListResponse> {
+    return await invoke<TemplateListResponse>('list_templates')
   }
 }

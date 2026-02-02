@@ -2,6 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
+import { openUrl } from '@tauri-apps/plugin-opener'
+import { LINKS } from '../config/links'
 import { pandocService, TemplateInfo, TemplateMeta, ConvertOptions } from '../services/pandocService'
 import { buildPandocMetadata, mergeConfigs } from '../services/configTransform'
 import { saveRecentConfig } from '../services/configStorage'
@@ -13,11 +15,11 @@ import PresetDialog from '../components/PresetDialog.vue'
 const uploadStore = useUploadStore()
 const router = useRouter()
 
-
 const templates = ref<TemplateMeta[]>([])
 const selectedTemplate = ref<TemplateMeta | null>(null)
 const isLoading = ref(false)
 const error = ref('')
+const hasPremium = ref(true)
 
 // 用户配置
 const userConfig = ref<Partial<TemplateConfig>>({})
@@ -35,13 +37,16 @@ onMounted(async () => {
     return
   }
   try {
-    const list = await pandocService.getTemplates()
-    templates.value = list
+    const response = await pandocService.getTemplates()
+    console.log('Template list fetched:', response) // Debug log
+    templates.value = response.templates
+    hasPremium.value = response.has_premium
     selectedTemplate.value = templates.value[0] || null
-    
+
     // 初始化配置
     initConfig()
   } catch (e) {
+    console.error('Error fetching template list:', e) // Debug log
     error.value = '无法加载模板列表，请稍后重试'
   }
 })
@@ -173,6 +178,10 @@ const handlePresetSave = (preset: ConfigPreset) => {
 const handlePresetDialogClose = () => {
   presetDialogVisible.value = false
 }
+
+const openDownloadPage = async () => {
+  await openUrl(LINKS.releases)
+}
 </script>
 
 <template>
@@ -230,6 +239,22 @@ const handlePresetDialogClose = () => {
             <div v-if="selectedTemplate?.id === template.id" class="text-[#16a34a] font-bold text-sm">✓ 已选择</div>
           </div>
         </div>
+      </div>
+      <div v-else-if="!hasPremium" class="bg-[linear-gradient(135deg,#f0fdfa,#ccfbf1)] border-2 border-dashed border-[#5eead4] rounded-2xl p-10 text-center text-[#0f766e]">
+        <div class="text-5xl mb-3">🌟</div>
+        <p class="m-0 font-semibold text-lg mb-2">这是开源版本，暂不支持高级模板</p>
+        <p class="m-0 mt-1 text-[#14b8a6] text-sm mb-4">您可以下载完整版本解锁更多专业模板</p>
+        <button 
+          @click="openDownloadPage"
+          class="inline-flex items-center gap-2 bg-[#0d9488] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#0f766e] transition-colors cursor-pointer border-0"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          下载完整版本
+        </button>
       </div>
       <div v-else class="bg-[linear-gradient(135deg,#f5f7ff,#ede9fe)] border-2 border-dashed border-[#c7d2fe] rounded-2xl p-10 text-center text-[#7c3aed]">
         <div class="text-5xl mb-3">🚀</div>
