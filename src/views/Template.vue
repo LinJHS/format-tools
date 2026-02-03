@@ -16,20 +16,9 @@ const uploadStore = useUploadStore()
 const router = useRouter()
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 
-// Check if user is ultra member
+// Auth store and ultra member check
 let authStore: any = null
-let isUltraMember = ref(false)
-if (authEnabled) {
-  const { useAuthStore } = await import('../auth-private/stores/auth')
-  authStore = useAuthStore()
-  
-  // Check if user has active ultra membership
-  const activeMembership = computed(() => authStore.activeMembership)
-  isUltraMember = computed(() => {
-    const membership = activeMembership.value
-    return membership?.membershipType === 'ultra'
-  })
-}
+const isUltraMember = ref(false)
 
 const templates = ref<TemplateMeta[]>([])
 const selectedTemplate = ref<TemplateMeta | null>(null)
@@ -54,6 +43,21 @@ onMounted(async () => {
     router.push('/upload')
     return
   }
+  
+  // Initialize auth store if enabled
+  if (authEnabled) {
+    try {
+      const { useAuthStore } = await import('../auth-private/stores/auth')
+      authStore = useAuthStore()
+      
+      // Check if user has active ultra membership
+      const membership = authStore.activeMembership
+      isUltraMember.value = membership?.membershipType === 'ultra'
+    } catch (e) {
+      console.error('Error loading auth store:', e)
+    }
+  }
+  
   try {
     const response = await pandocService.getTemplates()
     console.log('Template list fetched:', response) // Debug log
@@ -99,7 +103,7 @@ const convertMarkdown = async () => {
     loadingMessage.value = '转换中...'
 
     // Check if AI format fix is needed
-    if (useAIFix.value && authEnabled && isUltraMember.value) {
+    if (useAIFix.value && authEnabled && isUltraMember.value && authStore) {
       try {
         loadingMessage.value = 'AI 格式修复中...'
         console.log('Starting AI format fixing...')
