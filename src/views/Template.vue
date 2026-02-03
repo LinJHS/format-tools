@@ -257,7 +257,7 @@ const isSelected = (template: TemplateMeta) => {
 </script>
 
 <template>
-  <div class="p-6 pb-28 bg-[radial-gradient(circle_at_20%_20%,#f5f7ff,#eef2ff_40%,#e8edf8_80%)]">
+  <div class="p-6 pb-44 bg-[radial-gradient(circle_at_20%_20%,#f5f7ff,#eef2ff_40%,#e8edf8_80%)]">
     <div class="max-w-6xl mx-auto mb-7 flex items-center justify-between gap-4">
       <div>
         <h1 class="m-0 text-[#1f2937] text-2xl tracking-tight">选择模板</h1>
@@ -360,29 +360,37 @@ const isSelected = (template: TemplateMeta) => {
       @save="handlePresetSave"
     />
 
-    <div class="fixed left-0 right-0 bottom-0 bg-white/90 backdrop-blur border-t border-[#e5e7eb] py-3 px-6 shadow-[0_-6px_20px_rgba(52,64,84,0.08)]">
-      <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-          <div class="text-sm text-[#6b7280]">
-            <span class="font-semibold text-[#111827]">{{ selectedTemplate?.name || '未选择模板' }}</span>
-            <span class="ml-2">{{ selectedTemplate?.description || '请选择模板后开始转换' }}</span>
-          </div>
-          <label 
-            v-if="isUltraMember" 
-            class="flex items-center gap-2 cursor-pointer bg-gradient-to-r from-[#fef3c7] to-[#fde68a] text-[#92400e] px-3 py-1.5 rounded-lg text-xs font-semibold border-2 border-[#fbbf24] hover:from-[#fde68a] hover:to-[#fcd34d] transition-all"
-          >
+    <!-- AI Format Fix Bar -->
+    <div v-if="isUltraMember" class="fixed left-0 right-0 bottom-18.25 bg-[#fffbeb] border-t border-[#fcd34d] z-10">
+      <div class="max-w-6xl mx-auto px-6 py-2">
+        <label class="inline-flex items-center gap-2 cursor-pointer text-[#92400e] text-xs font-semibold hover:text-[#b45309] transition-colors select-none">
+          <div class="relative flex items-center justify-center w-4 h-4">
             <input 
               v-model="useAIFix" 
               type="checkbox" 
-              class="w-4 h-4 accent-[#f59e0b] cursor-pointer"
+              class="peer appearance-none w-4 h-4 border-2 border-[#f59e0b] rounded bg-white checked:bg-[#f59e0b] checked:border-[#f59e0b] cursor-pointer transition-all"
             />
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="absolute w-2.5 h-2.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[#f59e0b]">
               <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
               <path d="M2 17l10 5 10-5"></path>
               <path d="M2 12l10 5 10-5"></path>
             </svg>
             <span>AI 格式修复</span>
-          </label>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="fixed left-0 right-0 bottom-0 bg-white/90 backdrop-blur border-t border-[#e5e7eb] py-3 px-6 shadow-[0_-6px_20px_rgba(52,64,84,0.08)] z-20">
+      <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+        <div class="text-sm text-[#6b7280]">
+          <span class="font-semibold text-[#111827]">{{ selectedTemplate?.name || '未选择模板' }}</span>
+          <span class="ml-2">{{ selectedTemplate?.description || '请选择模板后开始转换' }}</span>
         </div>
         <div class="flex gap-3">
           <button class="bg-[#e5e7eb] text-[#374151] px-6 py-3 rounded-xl text-base font-bold cursor-pointer transition-all hover:bg-[#d1d5db]" @click="goBack">上一步</button>
