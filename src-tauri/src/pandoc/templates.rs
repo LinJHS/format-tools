@@ -21,9 +21,9 @@ struct TemplateResource {
     encrypted: bool,
 }
 
-pub fn prepare_template(app_handle: &AppHandle, template_name: &str) -> Result<TemplateInfo, String> {
+pub fn prepare_template(app_handle: &AppHandle, template_name: &str, encrypted: bool, key_string: String) -> Result<TemplateInfo, String> {
     // Try to find template in resources
-    let resource = find_template_resource(app_handle, template_name)?;
+    let resource = find_template_resource(app_handle, template_name, encrypted)?;
 
     let cache_root = app_handle
         .path()
@@ -44,9 +44,9 @@ pub fn prepare_template(app_handle: &AppHandle, template_name: &str) -> Result<T
 
     let runtime_docx = runtime_dir.join(format!("{}-{}.docx", template_name, millis));
     if resource.encrypted {
-        let encrypted = fs::read(&resource.path)
+        let encrypted_bytes = fs::read(&resource.path)
             .map_err(|e| format!("Failed to read protected template: {}", e))?;
-        let decrypted = decrypt_bytes_aes_cbc(&encrypted)?;
+        let decrypted = decrypt_bytes_aes_cbc(&encrypted_bytes, key_string)?;
         fs::write(&runtime_docx, decrypted)
             .map_err(|e| format!("Failed to stage protected template: {}", e))?;
     } else {
@@ -60,8 +60,8 @@ pub fn prepare_template(app_handle: &AppHandle, template_name: &str) -> Result<T
     })
 }
 
-fn find_template_resource(app_handle: &AppHandle, template_id: &str) -> Result<TemplateResource, String> {
-    // Determine the expected filename (assuming .docx extension)
+fn find_template_resource(app_handle: &AppHandle, template_id: &str, encrypted: bool) -> Result<TemplateResource, String> {
+    
     let filename = template_id.to_string();
 
     // 1. Development Environment: Check project root relative paths
@@ -73,7 +73,6 @@ fn find_template_resource(app_handle: &AppHandle, template_id: &str) -> Result<T
 
     for path in &dev_candidates {
         if path.exists() {
-            let encrypted = get_template_member_flag(app_handle, template_id).unwrap_or(false);
             return Ok(TemplateResource { path: path.clone(), encrypted });
         }
     }
@@ -87,7 +86,6 @@ fn find_template_resource(app_handle: &AppHandle, template_id: &str) -> Result<T
         
     if let Some(path) = resource_path {
         if path.exists() {
-            let encrypted = get_template_member_flag(app_handle, template_id).unwrap_or(false);
             return Ok(TemplateResource { path, encrypted });
         }
     }
@@ -95,55 +93,10 @@ fn find_template_resource(app_handle: &AppHandle, template_id: &str) -> Result<T
     Err(format!("Template '{}' not found in resources/templates", template_id))
 }
 
-fn parse_ts_object(content: &str) -> Result<serde_json::Value, String> {
-    let start = content.find('{').ok_or("No JSON object start found in metadata")?;
-    let end = content.rfind('}').ok_or("No JSON object end found in metadata")?;
-    if end <= start {
-        return Err("Invalid metadata object boundaries".to_string());
-    }
-    let json_like = &content[start..=end];
-    serde_json::from_str(json_like)
-        .map_err(|e| format!("Invalid JSON content in metadata: {}", e))
-}
-
-fn load_metadata_from_candidates(candidates: &[PathBuf]) -> Result<Vec<TemplateMeta>, String> {
-    for path in candidates {
-        if path.exists() {
-            let content = fs::read_to_string(path)
-                .map_err(|e| format!("Failed to read metadata: {}", e))?;
-            let parsed = parse_ts_object(&content)?;
-            let templates_val = if parsed.is_object() {
-                parsed.get("templates").cloned().unwrap_or(serde_json::Value::Array(vec![]))
-            } else {
-                parsed
-            };
-            let list: Vec<TemplateMeta> = serde_json::from_value(templates_val)
-                .map_err(|e| format!("Failed to parse templates: {}", e))?;
-            return Ok(list);
-        }
-    }
-
-    Ok(vec![])
-}
-
-fn get_template_member_flag(app_handle: &AppHandle, template_name: &str) -> Option<bool> {
-    let candidates = [
-        PathBuf::from("src-tauri/resources/templates/templates.ts"),
-        PathBuf::from("resources/templates/templates.ts"),
-        app_handle
-            .path()
-            .resolve("templates/templates.ts", BaseDirectory::Resource)
-            .unwrap_or_default(),
-    ];
-
-    if let Ok(list) = load_metadata_from_candidates(&candidates) {
-        return list
-            .into_iter()
-            .find(|t| t.id == template_name)
-            .map(|t| t.member);
-    }
-
-    None
+#[derive(Debug, Clone, Serialize)]
+pub struct TemplateListResponse {
+    pub templates: Vec<TemplateMeta>,
+    pub has_premium: bool,
 }
 
 #[allow(non_snake_case)]
@@ -160,46 +113,20 @@ pub struct TemplateMeta {
     pub defaultPreset: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct TemplateListResponse {
-    pub templates: Vec<TemplateMeta>,
-    pub has_premium: bool,
+pub fn list_templates(_app_handle: &AppHandle) -> Result<TemplateListResponse, String> {
+    // DEPRECATED: Metadata is now handled by the frontend importing templates.ts directly.
+    // This function returns empty list to avoid breaking if called, 
+    // but should be avoided in favor of frontend config.
+    Ok(TemplateListResponse {
+        templates: vec![],
+        has_premium: false,
+    })
 }
 
-pub fn list_templates(app_handle: &AppHandle) -> Result<TemplateListResponse, String> {
-    let mut all_templates: Vec<TemplateMeta> = vec![];
-
-    let free_candidates = [
-        PathBuf::from("src-tauri/resources/templates/templates.ts"),
-        PathBuf::from("resources/templates/templates.ts"),
-        app_handle.path().resolve("templates/templates.ts", BaseDirectory::Resource).unwrap_or_default(),
-    ];
-
-    if let Ok(mut list) = load_metadata_from_candidates(&free_candidates) {
-        all_templates.append(&mut list);
-    }
-
-    let has_premium = all_templates.iter().any(|t| t.member);
-
-    if all_templates.is_empty() {
-        Err("No templates metadata found in resources".to_string())
-    } else {
-        Ok(TemplateListResponse {
-            templates: all_templates,
-            has_premium,
-        })
-    }
-}
-
-fn decrypt_bytes_aes_cbc(data: &[u8]) -> Result<Vec<u8>, String> {
+fn decrypt_bytes_aes_cbc(data: &[u8], key_string: String) -> Result<Vec<u8>, String> {
     if data.len() < 16 {
         return Err("Encrypted content is too short".to_string());
     }
-
-    let key_string = std::env::var("TEMPLATE_ENCRYPTION_KEY")
-        .or_else(|_| std::env::var("VITE_TEMPLATE_ENCRYPTION_KEY"))
-        .or_else(|_| std::env::var("VITE_ENCRYPTION_KEY"))
-        .map_err(|_| "Encryption key not configured in environment".to_string())?;
 
     let mut hasher = Sha256::new();
     hasher.update(key_string.as_bytes());

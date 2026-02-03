@@ -138,9 +138,9 @@ pub async fn prepare_input_payload(app_handle: AppHandle, source: InputSource) -
 
 #[allow(non_snake_case)]
 #[command]
-pub fn prepare_template_protected(app_handle: AppHandle, templateName: String) -> Result<TemplateInfo, String> {
+pub fn prepare_template_protected(app_handle: AppHandle, templateName: String, isMember: bool, key: String) -> Result<TemplateInfo, String> {
     // Tauri v2 expects camelCase param names; use `templateName` here
-    prepare_template(&app_handle, &templateName)
+    prepare_template(&app_handle, &templateName, isMember, key)
 }
 
 #[command]

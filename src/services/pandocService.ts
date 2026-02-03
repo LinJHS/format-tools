@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+// @ts-ignore
+import templatesConfig from '../config/templates'
 
 export interface ConvertOptions {
   input_file: string
@@ -161,15 +163,30 @@ export const pandocService = {
   /**
    * 准备模板，返回可用的运行时路径
    */
-  async prepareTemplate(templateName: string): Promise<TemplateInfo> {
+  async prepareTemplate(templateName: string, isMember: boolean): Promise<TemplateInfo> {
+    // Pass local encryption key if available, otherwise empty string (ok for free templates)
+    const key = import.meta.env.VITE_TEMPLATE_ENCRYPTION_KEY || "";
+    
     // Tauri v2 maps snake_case to camelCase in command args; Rust expects `templateName`.
-    return await invoke<TemplateInfo>('prepare_template_protected', { templateName })
+    return await invoke<TemplateInfo>('prepare_template_protected', { 
+      templateName, 
+      isMember,
+      key 
+    })
   },
 
   /**
    * 获取模板列表元数据
    */
   async getTemplates(): Promise<TemplateListResponse> {
-    return await invoke<TemplateListResponse>('list_templates')
+    // Use imported configuration directly instead of calling backend
+    const config = templatesConfig as { version: number, templates: TemplateMeta[] };
+    const templates = config.templates || [];
+    const has_premium = templates.some(t => t.member);
+    
+    return Promise.resolve({
+      templates,
+      has_premium
+    })
   }
 }

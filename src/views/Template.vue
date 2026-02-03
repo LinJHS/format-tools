@@ -14,6 +14,7 @@ import PresetDialog from '../components/PresetDialog.vue'
 
 const uploadStore = useUploadStore()
 const router = useRouter()
+const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 
 const templates = ref<TemplateMeta[]>([])
 const selectedTemplate = ref<TemplateMeta | null>(null)
@@ -93,7 +94,10 @@ const convertMarkdown = async () => {
     saveRecentConfig(finalConfig)
 
     // Prepare template
-    const templateInfo: TemplateInfo = await pandocService.prepareTemplate(selectedTemplate.value.id)
+    const templateInfo: TemplateInfo = await pandocService.prepareTemplate(
+      selectedTemplate.value.id,
+      selectedTemplate.value.member
+    )
 
     // Prepare convert options
     const preparedInput = uploadStore.preparedInput
@@ -136,6 +140,7 @@ const freeTemplates = computed(() => {
 })
 
 const memberTemplates = computed(() => {
+  if (!authEnabled) return []
   return templates.value.filter((t) => t.member)
 })
 
@@ -245,7 +250,7 @@ const isSelected = (template: TemplateMeta) => {
           </div>
         </div>
       </div>
-      <div v-else-if="!hasPremium" class="bg-[linear-gradient(135deg,#f0fdfa,#ccfbf1)] border-2 border-dashed border-[#5eead4] rounded-2xl p-10 text-center text-[#0f766e]">
+      <div v-else-if="!authEnabled" class="bg-[linear-gradient(135deg,#f0fdfa,#ccfbf1)] border-2 border-dashed border-[#5eead4] rounded-2xl p-10 text-center text-[#0f766e]">
         <div class="text-5xl mb-3">🌟</div>
         <p class="m-0 font-semibold text-lg mb-2">这是开源版本，暂不支持高级模板</p>
         <p class="m-0 mt-1 text-[#14b8a6] text-sm mb-4">您可以下载完整版本解锁更多专业模板</p>
