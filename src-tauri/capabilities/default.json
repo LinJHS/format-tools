@@ -11,11 +11,15 @@
     },
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://linjhs.com/**" },{ "url": "https://github.com/linjhs/**" }]
+      "allow": [
+        { "url": "https://linjhs.com/**" },
+        { "url": "https://github.com/linjhs/**" }
+      ]
     },
     {
       "identifier": "opener:allow-reveal-item-in-dir",
       "allow": [{ "path": "**" }]
-    }
+    },
+    "fs:scope"
   ]
 }

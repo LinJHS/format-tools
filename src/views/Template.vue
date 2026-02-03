@@ -16,11 +16,28 @@ const uploadStore = useUploadStore()
 const router = useRouter()
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 
+// Check if user is ultra member
+let authStore: any = null
+let isUltraMember = ref(false)
+if (authEnabled) {
+  const { useAuthStore } = await import('../auth-private/stores/auth')
+  authStore = useAuthStore()
+  
+  // Check if user has active ultra membership
+  const activeMembership = computed(() => authStore.activeMembership)
+  isUltraMember = computed(() => {
+    const membership = activeMembership.value
+    return membership?.membershipType === 'ultra'
+  })
+}
+
 const templates = ref<TemplateMeta[]>([])
 const selectedTemplate = ref<TemplateMeta | null>(null)
 const isLoading = ref(false)
+const loadingMessage = ref('转换中...')
 const error = ref('')
 const hasPremium = ref(true)
+const useAIFix = ref(false) // AI format fix checkbox
 
 // 用户配置
 const userConfig = ref<Partial<TemplateConfig>>({})
@@ -79,6 +96,45 @@ const convertMarkdown = async () => {
   try {
     isLoading.value = true
     error.value = ''
+    loadingMessage.value = '转换中...'
+
+    // Check if AI format fix is needed
+    if (useAIFix.value && authEnabled && isUltraMember.value) {
+      try {
+        loadingMessage.value = 'AI 格式修复中...'
+        console.log('Starting AI format fixing...')
+        
+        // Import AI service
+        const { fixMarkdownFormat } = await import('../auth-private/services/aiFormatService')
+        const { readTextFile, writeTextFile } = await import('@tauri-apps/plugin-fs')
+        
+        // Get prepared input
+        const preparedInput = uploadStore.preparedInput
+        if (!preparedInput) {
+          throw new Error('Input not prepared')
+        }
+        
+        // Read markdown content
+        const markdownContent = await readTextFile(preparedInput.markdown_path)
+        
+        // Fix markdown format with AI
+        const fixedContent = await fixMarkdownFormat({
+          ultraToken: authStore.ultraToken!,
+          markdownContent
+        })
+        
+        // Write fixed content back
+        await writeTextFile(preparedInput.markdown_path, fixedContent)
+        console.log('AI format fixing completed')
+      } catch (aiError) {
+        console.error('AI format fixing failed:', aiError)
+        error.value = `AI 格式修复失败: ${aiError instanceof Error ? aiError.message : String(aiError)}`
+        isLoading.value = false
+        return
+      }
+    }
+
+    loadingMessage.value = '模板准备中...'
 
     // 合并配置（用户配置 > 模板预设 > 默认配置）
     const finalConfig = mergeConfigs(
@@ -98,6 +154,8 @@ const convertMarkdown = async () => {
       selectedTemplate.value.id,
       selectedTemplate.value.member
     )
+
+    loadingMessage.value = '文档转换中...'
 
     // Prepare convert options
     const preparedInput = uploadStore.preparedInput
@@ -128,6 +186,7 @@ const convertMarkdown = async () => {
     error.value = `转换失败: ${err instanceof Error ? err.message : String(err)}`
   } finally {
     isLoading.value = false
+    loadingMessage.value = '转换中...'
   }
 }
 
@@ -299,9 +358,27 @@ const isSelected = (template: TemplateMeta) => {
 
     <div class="fixed left-0 right-0 bottom-0 bg-white/90 backdrop-blur border-t border-[#e5e7eb] py-3 px-6 shadow-[0_-6px_20px_rgba(52,64,84,0.08)]">
       <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
-        <div class="text-sm text-[#6b7280]">
-          <span class="font-semibold text-[#111827]">{{ selectedTemplate?.name || '未选择模板' }}</span>
-          <span class="ml-2">{{ selectedTemplate?.description || '请选择模板后开始转换' }}</span>
+        <div class="flex items-center gap-4">
+          <div class="text-sm text-[#6b7280]">
+            <span class="font-semibold text-[#111827]">{{ selectedTemplate?.name || '未选择模板' }}</span>
+            <span class="ml-2">{{ selectedTemplate?.description || '请选择模板后开始转换' }}</span>
+          </div>
+          <label 
+            v-if="isUltraMember" 
+            class="flex items-center gap-2 cursor-pointer bg-gradient-to-r from-[#fef3c7] to-[#fde68a] text-[#92400e] px-3 py-1.5 rounded-lg text-xs font-semibold border-2 border-[#fbbf24] hover:from-[#fde68a] hover:to-[#fcd34d] transition-all"
+          >
+            <input 
+              v-model="useAIFix" 
+              type="checkbox" 
+              class="w-4 h-4 accent-[#f59e0b] cursor-pointer"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+            <span>AI 格式修复</span>
+          </label>
         </div>
         <div class="flex gap-3">
           <button class="bg-[#e5e7eb] text-[#374151] px-6 py-3 rounded-xl text-base font-bold cursor-pointer transition-all hover:bg-[#d1d5db]" @click="goBack">上一步</button>
@@ -313,7 +390,7 @@ const isSelected = (template: TemplateMeta) => {
             配置选项
           </button>
           <button class="bg-[linear-gradient(90deg,#22c55e,#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="!selectedTemplate || isLoading" @click="convertMarkdown">
-            {{ isLoading ? '转换中...' : '开始转换' }}
+            {{ isLoading ? loadingMessage : '开始转换' }}
           </button>
         </div>
       </div>
