@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useHistoryStore } from '../stores/history'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useSafeAuthStore } from '../auth/authWrapper'
 
+const router = useRouter()
 const authStore = useSafeAuthStore()
 const historyStore = useHistoryStore()
 
@@ -31,12 +33,25 @@ const openFile = async (path?: string) => {
 const formatDate = (ts: number) => {
   return new Date(ts).toLocaleString()
 }
+
+const goBack = () => {
+  router.back()
+}
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-       <h1 class="text-2xl font-bold text-gray-800">转换历史</h1>
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-4">
+        <button @click="goBack"
+          class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          返回
+        </button>
+        <h1 class="text-2xl font-bold text-gray-800">转换历史</h1>
+      </div>
        <span class="text-sm text-gray-500">共 {{ displayRecords.length }} 条记录</span>
     </div>
 

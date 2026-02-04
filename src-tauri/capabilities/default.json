@@ -13,7 +13,11 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://linjhs.com/**" },
-        { "url": "https://github.com/linjhs/**" }
+        { "url": "https://linjhs.com" },
+        { "url": "https://monticule.tech" },
+        { "url": "https://github.com/linjhs/**" },
+        { "url": "https://b23.tv/jHy9JyW" },
+        { "url": "https://xhslink.com/m/51oKk1reGIi" }
       ]
     },
     {
