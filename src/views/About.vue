@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { getVersion } from '@tauri-apps/api/app'
 
 const router = useRouter()
 const douyinCopied = ref(false)
+const appVersion = ref('')
+
+onMounted(async () => {
+  appVersion.value = await getVersion()
+})
 
 const links = {
   repo: 'https://github.com/LinJHS/format-tools',
@@ -56,7 +62,7 @@ const goBack = () => {
       </div>
       <h1 class="pl-20 text-3xl font-bold text-gray-800">
         格式匠
-        <span class="w-10 text-sm text-gray-500 ml-1">版本 v0.1.0</span>
+        <span class="w-10 text-sm text-gray-500 ml-1">版本 v{{ appVersion }}</span>
       </h1>
       
     </div>
