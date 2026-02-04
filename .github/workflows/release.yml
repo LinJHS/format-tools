@@ -1,0 +1,158 @@
+name: Build and Release to Aliyun
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Handle private submodule/repo if needed (copied from existing publish.yml logic if critical, 
+      # but sticking to basic build for now unless user asks. User's publish.yml has complex auth logic.
+      # If this is a private build, we might need that. 
+      # Let's assume for this "auto-update" task we are building the full app (private).
+      # I will include the auth logic from publish.yml to be safe.)
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Clone Private Auth Module
+        shell: bash
+        env:
+          GH_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
+        run: |
+          # The repo root is the project root.
+          cd src
+          if [ -n "$GH_PAT" ]; then
+             git clone https://$GH_PAT@github.com/LinJHS/format-tools-auth-private.git auth-private
+          fi
+      
+      - name: Create Environment File
+        shell: bash
+        run: |
+          cat > .env.local << EOF
+          VITE_ENABLE_AUTH=true
+          VITE_EMAS_APP_ID=${{ secrets.EMAS_APP_ID }}
+          VITE_EMAS_SPACE_ID=${{ secrets.EMAS_SPACE_ID }}
+          VITE_EMAS_CLIENT_SECRET=${{ secrets.EMAS_CLIENT_SECRET }}
+          VITE_EMAS_ENDPOINT=${{ secrets.EMAS_ENDPOINT }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD=${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          EOF
+
+      - name: Install dependencies
+        run: |
+          pnpm install
+
+      - name: Build Tauri App
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          pnpm tauri build
+
+      - name: Locate Artifacts
+        id: locate-artifacts
+        shell: bash
+        run: |
+          # Find installer in target/release/bundle/nsis
+          EXE_PATH=$(find src-tauri/target/release/bundle/nsis -name "*-setup.exe" | head -n 1)
+          SIG_PATH="${EXE_PATH}.sig"
+          
+          echo "Found Installer: $EXE_PATH"
+          
+          echo "exe_path=$(realpath "$EXE_PATH")" >> $GITHUB_OUTPUT
+          echo "sig_path=$(realpath "$SIG_PATH")" >> $GITHUB_OUTPUT
+          
+          FILENAME=$(basename "$EXE_PATH")
+          echo "filename=$FILENAME" >> $GITHUB_OUTPUT
+
+      - name: Generate Manifest
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
+          EXE_PATH: ${{ steps.locate-artifacts.outputs.exe_path }}
+          FILENAME: ${{ steps.locate-artifacts.outputs.filename }}
+          BASE_URL: https://sw.linjhs.com
+        run: |
+          CLEAN_VERSION="${VERSION#v}"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          SHA256=$(sha256sum "$EXE_PATH" | awk '{print $1}')
+          SIG=$(cat "${EXE_PATH}.sig")
+          
+          cat <<EOF > manifest.json
+          {
+            "version": "$CLEAN_VERSION",
+            "notes": "Update via GitHub Actions",
+            "pub_date": "$TIMESTAMP",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "$SIG",
+                "url": "$BASE_URL/windows-x86_64/$CLEAN_VERSION/$FILENAME"
+              }
+            }
+          }
+          EOF
+
+      - name: Install Python & OSS2
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Install oss2
+        run: pip install oss2
+
+      - name: Upload to Aliyun OSS
+        shell: python
+        env:
+          OSS_KEY_ID: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}
+          OSS_KEY_SECRET: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
+          OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+          OSS_ENDPOINT: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
+          VERSION: ${{ github.ref_name }}
+          EXE_PATH: ${{ steps.locate-artifacts.outputs.exe_path }}
+          SIG_PATH: ${{ steps.locate-artifacts.outputs.sig_path }}
+          FILENAME: ${{ steps.locate-artifacts.outputs.filename }}
+        run: |
+          import os
+          import oss2
+          
+          def clean_version(v):
+              return v[1:] if v.startswith('v') else v
+
+          key_id = os.environ['OSS_KEY_ID']
+          key_secret = os.environ['OSS_KEY_SECRET']
+          bucket_name = os.environ['OSS_BUCKET']
+          endpoint = os.environ['OSS_ENDPOINT']
+          tag_version = os.environ['VERSION']
+          c_version = clean_version(tag_version)
+          
+          exe_path = os.environ['EXE_PATH']
+          sig_path = os.environ['SIG_PATH']
+          filename = os.environ['FILENAME']
+          manifest_path = "manifest.json"
+          
+          print(f"Connecting to OSS: {bucket_name} @ {endpoint}")
+          auth = oss2.Auth(key_id, key_secret)
+          bucket = oss2.Bucket(auth, endpoint, bucket_name)
+          
+          oss_prefix = f"releases/windows-x86_64/{c_version}"
+          
+          print(f"Uploading {filename} to {oss_prefix}/{filename} ...")
+          bucket.put_object_from_file(f"{oss_prefix}/{filename}", exe_path)
+          bucket.put_object_from_file(f"{oss_prefix}/{filename}.sig", sig_path)
+          bucket.put_object_from_file(f"{oss_prefix}/manifest.json", manifest_path)
+          print("Upload complete!")

@@ -120,7 +120,7 @@ jobs:
 #   - EMAS_APP_ID: Your EMAS application ID
 #   - EMAS_SPACE_ID: Your EMAS space ID
 #   - EMAS_CLIENT_SECRET: Your EMAS client secret
-#   - EMAS_ENDPOINT: EMAS API endpoint (e.g., https://api.next.bspapp.com)
+#   - EMAS_ENDPOINT: EMAS API endpoint
 #
 # Notes:
 # - For open source builds: set VITE_ENABLE_AUTH=false, no auth module cloned
