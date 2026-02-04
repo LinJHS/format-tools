@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useUploadStore } from '../stores/upload'
+import { useHistoryStore } from '../stores/history'
+import { useSettingsStore } from '../stores/settings'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { LINKS } from '../config/links'
+import { useSafeAuthStore, getSafeAIFormatService } from '../auth/authWrapper'
 import { pandocService, TemplateInfo, TemplateMeta, ConvertOptions } from '../services/pandocService'
 import { buildPandocMetadata, mergeConfigs } from '../services/configTransform'
 import { saveRecentConfig } from '../services/configStorage'
@@ -13,6 +16,8 @@ import TemplateConfigDialog from '../components/TemplateConfigDialog.vue'
 import PresetDialog from '../components/PresetDialog.vue'
 
 const uploadStore = useUploadStore()
+const historyStore = useHistoryStore()
+const settingsStore = useSettingsStore()
 const router = useRouter()
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 
@@ -44,18 +49,12 @@ onMounted(async () => {
     return
   }
   
-  // Initialize auth store if enabled
+  // Initialize auth store
+  authStore = useSafeAuthStore()
   if (authEnabled) {
-    try {
-      const { useAuthStore } = await import('../auth-private/stores/auth')
-      authStore = useAuthStore()
-      
       // Check if user has active ultra membership
       const membership = authStore.activeMembership
       isUltraMember.value = membership?.membershipType === 'ultra'
-    } catch (e) {
-      console.error('Error loading auth store:', e)
-    }
   }
   
   try {
@@ -106,11 +105,13 @@ const convertMarkdown = async () => {
     if (useAIFix.value && authEnabled && isUltraMember.value && authStore) {
       try {
         loadingMessage.value = 'AI 格式修复中...'
-        console.log('Starting AI format fixing...')
         
-        // Import AI service
-        const { fixMarkdownFormat } = await import('../auth-private/services/aiFormatService')
-        const { readTextFile, writeTextFile } = await import('@tauri-apps/plugin-fs')
+        // Check if AI service is available
+        const aiService = getSafeAIFormatService()
+        if (!aiService) {
+           throw new Error('AI Service not available')
+        }
+        const { executeAIFormatFix } = aiService
         
         // Get prepared input
         const preparedInput = uploadStore.preparedInput
@@ -118,57 +119,9 @@ const convertMarkdown = async () => {
           throw new Error('Input not prepared')
         }
         
-        // Read markdown content
-        const markdownContent = await readTextFile(preparedInput.markdown_path)
+        // Execute AI format fix
+        await executeAIFormatFix(preparedInput.markdown_path, authStore)
         
-        // Helper to refresh ultra token
-        const refreshUltraToken = async () => {
-             console.log('Refreshing ultra token...')
-             const { fetchMembership } = await import('../auth-private/api/emasAuth')
-             const result = await fetchMembership(authStore.token)
-             if (result.success && result.token) {
-                 authStore.setMemberships(result.memberships || [], result.token)
-                 return result.token
-             }
-             throw new Error('Failed to refresh ultra token')
-        }
-
-        let ultraToken = authStore.ultraToken
-        if (!ultraToken) {
-            try {
-                ultraToken = await refreshUltraToken()
-            } catch (e) {
-                console.warn('Could not refresh ultra token:', e)
-            }
-        }
-
-        if (!ultraToken) {
-            throw new Error('Ultra member token is required')
-        }
-
-        try {
-            // Fix markdown format with AI
-            const fixedContent = await fixMarkdownFormat({
-              ultraToken: ultraToken,
-              markdownContent
-            })
-            
-            // Write fixed content back
-            await writeTextFile(preparedInput.markdown_path, fixedContent)
-            console.log('AI format fixing completed')
-        } catch (firstError) {
-            console.warn('AI fix failed, retrying with new token...', firstError)
-            // Retry once with refreshed token
-            ultraToken = await refreshUltraToken()
-            
-            const fixedContentRetry = await fixMarkdownFormat({
-              ultraToken: ultraToken,
-              markdownContent
-            })
-            
-            await writeTextFile(preparedInput.markdown_path, fixedContentRetry)
-            console.log('AI format fixing completed (after retry)')
-        }
       } catch (aiError) {
         console.error('AI format fixing failed:', aiError)
         error.value = `AI 格式修复失败: ${aiError instanceof Error ? aiError.message : String(aiError)}`
@@ -219,6 +172,26 @@ const convertMarkdown = async () => {
     // Convert markdown
     const outputPath = await pandocService.convertMarkdown(convertOptions)
 
+    // Log History (Success)
+    try {
+        const type = authStore?.activeMembership?.membershipType
+        let max = 3
+        if (type === 'ultra') max = 100
+        else if (type === 'pro') max = 10
+        
+        const limit = Math.min(settingsStore.historyLimit, max)
+        
+        historyStore.addRecord({
+            id: Date.now().toString(),
+            date: Date.now(),
+            fileName: preparedInput.source_name,
+            templateName: selectedTemplate.value?.name || 'Unknown',
+            outputPath: outputPath,
+            status: 'success'
+        })
+        historyStore.prune(limit)
+    } catch (e) { console.error('History log failed', e) }
+
     // Show success message and navigate
     console.log('转换完成:', outputPath)
     uploadStore.setOutputPath(outputPath)
@@ -226,6 +199,30 @@ const convertMarkdown = async () => {
     router.push('/result')
   } catch (err) {
     console.error('转换失败:', err)
+    
+    // Log History (Fail)
+    try {
+        const type = authStore?.activeMembership?.membershipType
+        let max = 3
+        if (type === 'ultra') max = 100
+        else if (type === 'pro') max = 10
+        
+        const limit = Math.min(settingsStore.historyLimit, max)
+        
+        // Try to get input name even if preparedInput might be missing
+        const fileName = uploadStore.preparedInput?.source_name || uploadStore.files[0]?.name || 'Unknown File'
+        
+        historyStore.addRecord({
+            id: Date.now().toString(),
+            date: Date.now(),
+            fileName: fileName,
+            templateName: selectedTemplate.value?.name || 'Unknown',
+            status: 'failed',
+            errorMessage: err instanceof Error ? err.message : String(err)
+        })
+        historyStore.prune(limit)
+    } catch (e) { console.error('History log failed', e) }
+
     error.value = `转换失败: ${err instanceof Error ? err.message : String(err)}`
   } finally {
     isLoading.value = false

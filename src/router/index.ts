@@ -27,8 +27,24 @@ const routes = [
     path: '/result',
     name: 'Result',
     component: () => import('../views/Result.vue')
+  },
+  {
+    path: '/history',
+    name: 'History',
+    component: () => import('../views/History.vue')
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/Settings.vue')
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('../views/About.vue')
   }
 ]
+
 
 const router = createRouter({
   history: createWebHistory(),

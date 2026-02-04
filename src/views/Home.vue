@@ -2,11 +2,11 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { useAuthStore } from '../auth-private/stores/auth'
+import { useSafeAuthStore } from '../auth/authWrapper'
 import { LINKS } from '../config/links'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const authStore = useSafeAuthStore()
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 

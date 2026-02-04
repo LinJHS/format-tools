@@ -23,9 +23,12 @@ export async function initAuthState() {
   // Env guard: only attempt when explicitly enabled
   if (import.meta.env.VITE_ENABLE_AUTH !== 'true') return
 
+  const entries = Object.entries(authModules)
+  if (!entries.length) return
+
   try {
-    const { initializeAuthState } = await import('../auth-private/index.ts')
-    await initializeAuthState()
+    const mod = (await entries[0][1]()) as { initializeAuthState?: () => Promise<void> }
+    await mod.initializeAuthState?.()
   } catch (err) {
     console.warn('Auth state initialization failed:', err)
   }
