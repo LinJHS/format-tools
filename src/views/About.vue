@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 const router = useRouter()
+const douyinCopied = ref(false)
 
 const links = {
   repo: 'https://github.com/LinJHS/format-tools',
   author1: 'https://linjhs.com',
-  author2: 'https://monticule.tech',
+  author2: 'https://rexera.github.io',
+  author3: 'https://monticule.tech',
   purchase: 'https://linjhs.com/shop/product/2',
   xhs: 'https://xhslink.com/m/51oKk1reGIi',
   bilibili: 'https://b23.tv/jHy9JyW',
@@ -21,7 +24,10 @@ const open = async (url: string) => {
 const copyDouyin = async () => {
   try {
     await navigator.clipboard.writeText(links.douyin)
-    // No alert, just silent copy or maybe add a toast later.
+    douyinCopied.value = true
+    setTimeout(() => {
+      douyinCopied.value = false
+    }, 2000)
   } catch (e) {
     console.error(e)
   }
@@ -43,23 +49,26 @@ const goBack = () => {
       </button>
     </div>
 
-    <div class="text-center mb-10">
+    <div class="text-center mb-10 -mt-12">
       <div
         class="bg-linear-to-r from-purple-600 to-indigo-600 w-20 h-20 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4">
         <span class="text-4xl text-white font-bold">匠</span>
       </div>
-      <h1 class="text-3xl font-bold text-gray-800">格式匠 Format Tools</h1>
-      <p class="text-gray-500 mt-2">版本 v0.1.0</p>
+      <h1 class="pl-20 text-3xl font-bold text-gray-800">
+        格式匠
+        <span class="w-10 text-sm text-gray-500 ml-1">版本 v0.1.0</span>
+      </h1>
+      
     </div>
 
     <div class="bg-white shadow rounded-lg overflow-hidden divide-y divide-gray-100">
       <!-- Project Info -->
-      <div class="p-6">
-        <h2 class="text-lg font-semibold text-gray-800 mb-4">项目信息</h2>
+      <div class="p-4">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">项目信息</h2>
         <div class="space-y-3">
-          <div class="flex items-center justify-between">
+          <div class="flex">
             <span class="text-gray-600">开源仓库</span>
-            <button @click="open(links.repo)" class="text-blue-600 hover:underline">
+            <button @click="open(links.repo)" class="ml-2 text-blue-600 hover:underline">
               GitHub: LinJHS/format-tools
             </button>
           </div>
@@ -67,11 +76,12 @@ const goBack = () => {
       </div>
 
       <!-- Authors -->
-      <div class="p-6">
-        <h2 class="text-lg font-semibold text-gray-800 mb-4">作者 & 团队</h2>
+      <div class="p-4">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">作者 & 团队</h2>
         <div class="flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">L</div>
+            <img src="/linjhs-avatar.webp" alt="LinJHS"
+              class="w-10 h-10 rounded-full object-cover border border-gray-100">
             <div>
               <button @click="open(links.author1)"
                 class="font-medium text-gray-800 hover:text-blue-600">@LinJHS</button>
@@ -79,9 +89,18 @@ const goBack = () => {
             </div>
           </div>
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">M</div>
+            <img src="/rexera-avatar.jpg" alt="Rexera"
+              class="w-10 h-10 rounded-full object-cover border border-gray-100">
             <div>
-              <button @click="open(links.author2)" class="font-medium text-gray-800 hover:text-blue-600">@丘原科技</button>
+              <button @click="open(links.author2)"
+                class="font-medium text-gray-800 hover:text-blue-600">@rexera</button>
+              <p class="text-xs text-gray-500">https://rexera.github.io</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+             <img src="/monticule-avatar.webp" alt="丘原科技" class="w-10 h-10 rounded-full object-cover border border-gray-100">
+            <div>
+              <button @click="open(links.author3)" class="font-medium text-gray-800 hover:text-blue-600">@丘原科技</button>
               <p class="text-xs text-gray-500">https://monticule.tech</p>
             </div>
           </div>
@@ -89,8 +108,8 @@ const goBack = () => {
       </div>
 
       <!-- Social Media -->
-      <div class="p-6">
-        <h2 class="text-lg font-semibold text-gray-800 mb-4">关注我们</h2>
+      <div class="p-4">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">关注我们</h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <button @click="open(links.xhs)"
             class="flex items-center gap-2 p-3 rounded-lg bg-red-50 hover:bg-red-100 transition text-red-700">
@@ -156,14 +175,17 @@ const goBack = () => {
                 d="M410.91072 427.58144c-158.8224 20.15232-284.44672 222.72-154.112 405.00224 120.40192 98.47808 373.68832 41.20576 380.70272-171.85792l-0.17408-324.1472a280.7296 280.7296 0 0 0 142.88896 38.62528V261.2224a144.98816 144.98816 0 0 1-72.8064-54.82496 135.23968 135.23968 0 0 1-54.70208-72.45824h-123.66848l-0.08192 561.41824c-0.11264 78.46912-130.9696 106.41408-164.18816 30.2592-83.18976-39.77216-64.37888-190.9248 46.31552-192.57344z"
                 fill="#FFFFFF" p-id="1809"></path>
             </svg>
-            <span>抖音（点击复制抖音号）</span>
+            <span>抖音
+              <span v-if="!douyinCopied" class="ml-1 text-xs text-gray-500">点击复制抖音号 </span>
+              <span v-else class="ml-1 text-xs text-green-600">复制成功</span>
+            </span>
           </button>
         </div>
       </div>
 
       <!-- Purchase -->
-      <div class="p-6 bg-yellow-50">
-        <div class="flex justify-between items-center flex-wrap gap-4">
+      <div class="p-4 bg-yellow-50">
+        <div class="flex justify-between items-center flex-wrap gap-2">
           <div>
             <h3 class="font-bold text-yellow-800">支持我们</h3>
             <p class="text-sm text-yellow-700">解锁 专业版/大师版 高级功能</p>

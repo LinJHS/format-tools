@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHistoryStore } from '../stores/history'
-import { openUrl } from '@tauri-apps/plugin-opener'
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
 import { useSafeAuthStore } from '../auth/authWrapper'
 
 const router = useRouter()
@@ -23,10 +23,20 @@ const displayRecords = computed(() => {
 const openFile = async (path?: string) => {
   if (!path) return
   try {
-    await openUrl(path)
+    await openPath(path)
   } catch (e) {
     console.error('Failed to open file', e)
     alert('无法打开文件: ' + path)
+  }
+}
+
+const openFolder = async (path?: string) => {
+  if (!path) return
+  try {
+    await revealItemInDir(path)
+  } catch (e) {
+    console.error('Failed to open folder', e)
+    alert('无法打开文件夹: ' + path)
   }
 }
 
@@ -41,19 +51,20 @@ const goBack = () => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-4">
-        <button @click="goBack"
-          class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+      <div class="w-20">
+        <button @click="goBack" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
           返回
         </button>
-        <h1 class="text-2xl font-bold text-gray-800">转换历史</h1>
       </div>
-       <span class="text-sm text-gray-500">共 {{ displayRecords.length }} 条记录</span>
+      <h1 class="text-2xl font-bold text-gray-900">转换历史</h1>
+      <span class="w-20 text-sm text-gray-500">共 {{ displayRecords.length }} 条记录</span>
     </div>
+    
 
     <div v-if="displayRecords.length === 0" class="text-center py-12 bg-white rounded-lg shadow-sm">
       <p class="text-gray-500">暂无转换历史</p>
@@ -92,6 +103,13 @@ const goBack = () => {
                 class="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded text-sm hover:bg-blue-100"
             >
                 打开文件
+            </button>
+            <button 
+                v-if="record.status === 'success' && record.outputPath"
+                @click="openFolder(record.outputPath)"
+                class="bg-purple-50 text-purple-600 border border-purple-200 px-3 py-1.5 rounded text-sm hover:bg-purple-100"
+            >
+                打开位置
             </button>
         </div>
       </div>

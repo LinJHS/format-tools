@@ -242,19 +242,26 @@ fn inject_metadata_to_markdown(file_path: &str, metadata: &Value) -> Result<(), 
 /// 清理旧的 session 目录，只保留最新的5个
 fn cleanup_old_sessions(app: &AppHandle) {
     if let Ok(cache_dir) = app.path().cache_dir() {
-        let sessions_dir = cache_dir.join("format-tools").join("sessions");
-        if !sessions_dir.exists() {
+        // sessions are stored directly under format-tools directory
+        let format_tools_dir = cache_dir.join("format-tools");
+        if !format_tools_dir.exists() {
             return;
         }
         
-        // 读取所有 session 目录
+        // 读取所有 session- 开头的目录
         let mut sessions: Vec<(PathBuf, SystemTime)> = Vec::new();
-        if let Ok(entries) = fs::read_dir(&sessions_dir) {
+        if let Ok(entries) = fs::read_dir(&format_tools_dir) {
             for entry in entries.flatten() {
-                if let Ok(metadata) = entry.metadata() {
-                    if metadata.is_dir() {
-                        if let Ok(modified) = metadata.modified() {
-                            sessions.push((entry.path(), modified));
+                let path = entry.path();
+                if path.is_dir() {
+                    // Check if directory name starts with "session-"
+                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                        if file_name.starts_with("session-") {
+                            if let Ok(metadata) = fs::metadata(&path) {
+                                if let Ok(modified) = metadata.modified() {
+                                    sessions.push((path, modified));
+                                }
+                            }
                         }
                     }
                 }
@@ -272,3 +279,28 @@ fn cleanup_old_sessions(app: &AppHandle) {
         }
     }
 }
+
+pub fn delete_all_sessions(app: &AppHandle) -> Result<(), String> {
+    let cache_dir = app.path().cache_dir()
+        .map_err(|e| format!("Failed to get cache dir: {}", e))?;
+        
+    let format_tools_dir = cache_dir.join("format-tools");
+    if !format_tools_dir.exists() {
+        return Ok(());
+    }
+
+    if let Ok(entries) = fs::read_dir(&format_tools_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                    if file_name.starts_with("session-") {
+                        let _ = fs::remove_dir_all(path);
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+

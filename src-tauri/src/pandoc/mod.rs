@@ -8,7 +8,7 @@ use tauri::{command, Window, AppHandle};
 
 use config::{PandocConfig, get_pandoc_download_urls, get_crossref_download_urls, get_install_dir};
 use downloader::{download_with_fallback, extract_archive, find_executable_in_dir};
-use converter::{ConvertOptions, convert_md_to_docx, check_pandoc_installed, check_crossref_installed, get_pandoc_version};
+use converter::{ConvertOptions, convert_md_to_docx, check_pandoc_installed, check_crossref_installed, get_pandoc_version, delete_all_sessions};
 use input::{InputSource, PreparedInput, prepare_input};
 use templates::{TemplateInfo, TemplateListResponse, prepare_template, list_templates as list_templates_impl};
 
@@ -147,3 +147,9 @@ pub fn prepare_template_protected(app_handle: AppHandle, templateName: String, i
 pub fn list_templates(app_handle: AppHandle) -> Result<TemplateListResponse, String> {
     list_templates_impl(&app_handle)
 }
+
+#[command]
+pub async fn clear_sessions(app_handle: AppHandle) -> Result<(), String> {
+    delete_all_sessions(&app_handle)
+}
+

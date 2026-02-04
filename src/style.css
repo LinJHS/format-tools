@@ -17,6 +17,12 @@
     @apply select-text;
   }
 
+  /* Change cursor to pointer for buttons and links */
+  button,
+  a {
+    @apply cursor-pointer;
+  }
+
   /* Custom Scrollbar for Webkit (Chrome, Edge, Safari) */
   ::-webkit-scrollbar {
     width: 6px;
