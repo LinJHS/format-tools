@@ -127,11 +127,6 @@ const convertMarkdown = async () => {
     const pandocMetadata = buildPandocMetadata(finalConfig)
     saveRecentConfig(finalConfig)
 
-    const templateInfo: TemplateInfo = await pandocService.prepareTemplate(
-      selectedTemplate.value.id,
-      selectedTemplate.value.member
-    )
-
     // Process each file
     for (let i = 0; i < total; i++) {
         const input = inputs[i]
@@ -139,6 +134,13 @@ const convertMarkdown = async () => {
         loadingMessage.value = `(${i + 1}/${total}) 正在处理: ${currentName}`
         
         try {
+            // Prepare template (Inside loop to prevent deletion issues)
+            // Note: This might be slightly inefficient but safe if backend deletes files
+             const templateInfo: TemplateInfo = await pandocService.prepareTemplate(
+              selectedTemplate.value.id,
+              selectedTemplate.value.member
+            )
+
             // AI Fix
             if (useAIFix.value && authEnabled && isUltraMember.value && authStore) {
                  loadingMessage.value = `(${i + 1}/${total}) AI 格式修复: ${currentName}`
@@ -233,6 +235,7 @@ const goBack = () => {
   router.push('/upload')
 }
 
+// ... existing computed properties ...
 const freeTemplates = computed(() => {
   return templates.value.filter((t) => !t.member)
 })
@@ -242,57 +245,31 @@ const memberTemplates = computed(() => {
   return templates.value.filter((t) => t.member)
 })
 
-// 配置对话框事件处理
-const handleConfigConfirm = (config: Partial<TemplateConfig>) => {
-  userConfig.value = config
-}
+const handleConfigConfirm = (config: Partial<TemplateConfig>) => { userConfig.value = config }
+const handleConfigDialogLoadPreset = () => { configDialogVisible.value = false; presetDialogMode.value = 'load'; presetDialogVisible.value = true }
+const handleConfigDialogSavePreset = () => { configDialogVisible.value = false; presetDialogMode.value = 'save'; presetDialogVisible.value = true }
+const handleConfigDialogReset = () => { initConfig() }
+const showConfigDialog = () => { configDialogVisible.value = true }
 
-const handleConfigDialogLoadPreset = () => {
-  configDialogVisible.value = false
-  presetDialogMode.value = 'load'
-  presetDialogVisible.value = true
-}
+const handlePresetLoad = (config: Partial<TemplateConfig>) => { userConfig.value = { ...config }; configDialogVisible.value = true }
+const handlePresetSave = (preset: ConfigPreset) => { console.log('预设已保存:', preset.name); configDialogVisible.value = true }
+const handlePresetDialogClose = () => { presetDialogVisible.value = false }
 
-const handleConfigDialogSavePreset = () => {
-  configDialogVisible.value = false
-  presetDialogMode.value = 'save'
-  presetDialogVisible.value = true
-}
-
-const handleConfigDialogReset = () => {
-  initConfig()
-}
-
-const showConfigDialog = () => {
-  configDialogVisible.value = true
-}
-
-// 预设对话框事件处理
-const handlePresetLoad = (config: Partial<TemplateConfig>) => {
-  userConfig.value = { ...config }
-  configDialogVisible.value = true // 加载预设后重新打开配置对话框
-}
-
-const handlePresetSave = (preset: ConfigPreset) => {
-  console.log('预设已保存:', preset.name)
-  configDialogVisible.value = true // 保存预设后重新打开配置对话框
-}
-
-const handlePresetDialogClose = () => {
-  presetDialogVisible.value = false
-}
-
-const openDownloadPage = async () => {
-  await openUrl(LINKS.releases)
-}
-
-const isSelected = (template: TemplateMeta) => {
-  return selectedTemplate.value?.id === template.id
-}
+const openDownloadPage = async () => { await openUrl(LINKS.releases) }
+const isSelected = (template: TemplateMeta) => { return selectedTemplate.value?.id === template.id }
 </script>
 
 <template>
   <div class="p-6 pb-44 bg-[radial-gradient(circle_at_20%_20%,#f5f7ff,#eef2ff_40%,#e8edf8_80%)]">
+    <!-- Progress Overlay -->
+    <div v-if="isLoading" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-11/12 text-center animate-fade-in">
+        <div class="inline-block w-10 h-10 border-4 border-[#e0e7ff] border-t-[#6366f1] rounded-full animate-spin mb-4"></div>
+        <h3 class="text-lg font-bold text-gray-900 m-0 mb-2">正在转换</h3>
+        <p class="text-sm text-gray-600 m-0">{{ loadingMessage }}</p>
+      </div>
+    </div>
+
     <div class="max-w-6xl mx-auto mb-7 flex items-center justify-between gap-4">
       <div>
         <h1 class="m-0 text-[#1f2937] text-2xl tracking-tight">选择模板</h1>
@@ -437,7 +414,7 @@ const isSelected = (template: TemplateMeta) => {
             配置选项
           </button>
           <button class="bg-[linear-gradient(90deg,#22c55e,#16a34a)] text-white px-7 py-3 rounded-xl text-base font-bold cursor-pointer transition-all shadow-[0_12px_30px_rgba(34,197,94,0.25)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(34,197,94,0.3)] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none" :disabled="!selectedTemplate || isLoading" @click="convertMarkdown">
-            {{ isLoading ? loadingMessage : '开始转换' }}
+            {{ isLoading ? '正在转换...' : '开始转换' }}
           </button>
         </div>
       </div>
