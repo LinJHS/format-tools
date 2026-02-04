@@ -99,131 +99,130 @@ const convertMarkdown = async () => {
   try {
     isLoading.value = true
     error.value = ''
-    loadingMessage.value = '转换中...'
-
-    // Check if AI format fix is needed
-    if (useAIFix.value && authEnabled && isUltraMember.value && authStore) {
-      try {
-        loadingMessage.value = 'AI 格式修复中...'
-        
-        // Check if AI service is available
-        const aiService = getSafeAIFormatService()
-        if (!aiService) {
-           throw new Error('AI Service not available')
-        }
-        const { executeAIFormatFix } = aiService
-        
-        // Get prepared input
-        const preparedInput = uploadStore.preparedInput
-        if (!preparedInput) {
-          throw new Error('Input not prepared')
-        }
-        
-        // Execute AI format fix
-        await executeAIFormatFix(preparedInput.markdown_path, authStore)
-        
-      } catch (aiError) {
-        console.error('AI format fixing failed:', aiError)
-        error.value = `AI 格式修复失败: ${aiError instanceof Error ? aiError.message : String(aiError)}`
+    
+    const inputs = uploadStore.preparedInputs || (uploadStore.preparedInput ? [uploadStore.preparedInput] : [])
+    if (inputs.length === 0) {
+        error.value = '未找到预期输入文件'
         isLoading.value = false
         return
-      }
     }
 
-    loadingMessage.value = '模板准备中...'
+    const total = inputs.length
+    const results: any[] = []
 
-    // 合并配置（用户配置 > 模板预设 > 默认配置）
+    // Prepare template once if shared configuration
+    // (Optimization: call prepareTemplate once since config is shared)
+    // However, prepareTemplate returns a `reference_doc` path specific to the template copy?
+    // Usually it unpacks the template. If unique per run, call inside loop. 
+    // If idempotent/reusable, call outside. Safe to call once.
+    
+    loadingMessage.value = '模板准备中...'
+    
+    // Merge config once
     const finalConfig = mergeConfigs(
       userConfig.value,
       (selectedTemplate.value.defaultPreset as Partial<TemplateConfig>) || {},
       DEFAULT_CONFIG
     )
-    
-    // 转换为 Pandoc 元数据
     const pandocMetadata = buildPandocMetadata(finalConfig)
-    
-    // 保存到历史记录
     saveRecentConfig(finalConfig)
 
-    // Prepare template
     const templateInfo: TemplateInfo = await pandocService.prepareTemplate(
       selectedTemplate.value.id,
       selectedTemplate.value.member
     )
 
-    loadingMessage.value = '文档转换中...'
+    // Process each file
+    for (let i = 0; i < total; i++) {
+        const input = inputs[i]
+        const currentName = input.source_name || `File ${i+1}`
+        loadingMessage.value = `(${i + 1}/${total}) 正在处理: ${currentName}`
+        
+        try {
+            // AI Fix
+            if (useAIFix.value && authEnabled && isUltraMember.value && authStore) {
+                 loadingMessage.value = `(${i + 1}/${total}) AI 格式修复: ${currentName}`
+                 const aiService = getSafeAIFormatService()
+                 if (aiService) {
+                     await aiService.executeAIFormatFix(input.markdown_path, authStore)
+                 }
+            }
+            
+            loadingMessage.value = `(${i + 1}/${total}) 转换文档: ${currentName}`
+            
+            const convertOptions: ConvertOptions = {
+              input_file: input.markdown_path,
+              source_dir: input.source_dir,
+              source_name: input.source_name,
+              reference_doc: templateInfo.reference_doc,
+              metadata: pandocMetadata,
+              metadata_file: undefined,
+              use_crossref: true
+            }
 
-    // Prepare convert options
-    const preparedInput = uploadStore.preparedInput
-    if (!preparedInput) {
-      throw new Error('Input not prepared')
+            const outPath = await pandocService.convertMarkdown(convertOptions)
+            
+            results.push({
+                fileName: currentName,
+                outputPath: outPath,
+                status: 'success'
+            })
+            
+            // Log History (Success)
+            try {
+                const type = authStore?.activeMembership?.membershipType
+                let max = 3
+                if (type === 'ultra') max = 100
+                else if (type === 'pro') max = 10
+                const limit = Math.min(settingsStore.historyLimit, max)
+                
+                historyStore.addRecord({
+                    id: Date.now().toString() + i,
+                    date: Date.now(),
+                    fileName: currentName,
+                    templateName: selectedTemplate.value?.name || 'Unknown',
+                    outputPath: outPath,
+                    status: 'success'
+                })
+                historyStore.prune(limit)
+            } catch (e) { console.error('History log failed', e) }
+
+        } catch (currentError: any) {
+            console.error(`File ${currentName} failed:`, currentError)
+            results.push({
+                fileName: currentName,
+                status: 'failed',
+                error: currentError.message || String(currentError)
+            })
+            
+             // Log History (Fail)
+            try {
+                const type = authStore?.activeMembership?.membershipType
+                let max = 3
+                if (type === 'ultra') max = 100
+                else if (type === 'pro') max = 10
+                const limit = Math.min(settingsStore.historyLimit, max)
+                
+                historyStore.addRecord({
+                    id: Date.now().toString() + i,
+                    date: Date.now(),
+                    fileName: currentName,
+                    templateName: selectedTemplate.value?.name || 'Unknown',
+                    status: 'failed',
+                    errorMessage: currentError.message || String(currentError)
+                })
+                historyStore.prune(limit)
+            } catch (e) { console.error('History log failed', e) }
+        }
     }
 
-    const convertOptions: ConvertOptions = {
-      input_file: preparedInput.markdown_path,
-      source_dir: preparedInput.source_dir,
-      source_name: preparedInput.source_name,
-      reference_doc: templateInfo.reference_doc,
-      metadata: pandocMetadata,  // 传递元数据
-      metadata_file: undefined,
-      use_crossref: true
-    }
-
-    // Convert markdown
-    const outputPath = await pandocService.convertMarkdown(convertOptions)
-
-    // Log History (Success)
-    try {
-        const type = authStore?.activeMembership?.membershipType
-        let max = 3
-        if (type === 'ultra') max = 100
-        else if (type === 'pro') max = 10
-        
-        const limit = Math.min(settingsStore.historyLimit, max)
-        
-        historyStore.addRecord({
-            id: Date.now().toString(),
-            date: Date.now(),
-            fileName: preparedInput.source_name,
-            templateName: selectedTemplate.value?.name || 'Unknown',
-            outputPath: outputPath,
-            status: 'success'
-        })
-        historyStore.prune(limit)
-    } catch (e) { console.error('History log failed', e) }
-
-    // Show success message and navigate
-    console.log('转换完成:', outputPath)
-    uploadStore.setOutputPath(outputPath)
+    uploadStore.setResults(results)
     uploadStore.setStep(3)
     router.push('/result')
-  } catch (err) {
-    console.error('转换失败:', err)
-    
-    // Log History (Fail)
-    try {
-        const type = authStore?.activeMembership?.membershipType
-        let max = 3
-        if (type === 'ultra') max = 100
-        else if (type === 'pro') max = 10
-        
-        const limit = Math.min(settingsStore.historyLimit, max)
-        
-        // Try to get input name even if preparedInput might be missing
-        const fileName = uploadStore.preparedInput?.source_name || uploadStore.files[0]?.name || 'Unknown File'
-        
-        historyStore.addRecord({
-            id: Date.now().toString(),
-            date: Date.now(),
-            fileName: fileName,
-            templateName: selectedTemplate.value?.name || 'Unknown',
-            status: 'failed',
-            errorMessage: err instanceof Error ? err.message : String(err)
-        })
-        historyStore.prune(limit)
-    } catch (e) { console.error('History log failed', e) }
 
-    error.value = `转换失败: ${err instanceof Error ? err.message : String(err)}`
+  } catch (err) {
+    console.error('Batch process fatal error:', err)
+    error.value = `处理中断: ${err instanceof Error ? err.message : String(err)}`
   } finally {
     isLoading.value = false
     loadingMessage.value = '转换中...'
