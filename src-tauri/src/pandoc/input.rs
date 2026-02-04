@@ -33,7 +33,10 @@ pub struct PreparedInput {
     pub source_dir: Option<String>,
 }
 
-pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Result<PreparedInput, String> {
+pub async fn prepare_input(
+    app_handle: &AppHandle,
+    source: InputSource,
+) -> Result<PreparedInput, String> {
     let session_dir = build_session_dir(app_handle)?;
     fs::create_dir_all(&session_dir).map_err(|e| format!("Failed to create session dir: {}", e))?;
 
@@ -51,7 +54,11 @@ pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Resul
                 return Err("File not found".to_string());
             }
 
-            let file_name = original_name.or_else(|| input_path.file_name().map(|n| n.to_string_lossy().to_string()));
+            let file_name = original_name.or_else(|| {
+                input_path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+            });
 
             let (markdown_path, copied_images, markdown_files) = handle_file_input(
                 &input_path,
@@ -71,10 +78,14 @@ pub async fn prepare_input(app_handle: &AppHandle, source: InputSource) -> Resul
                 source_dir: input_path.parent().map(|p| p.to_string_lossy().to_string()),
             })
         }
-        InputSource::Text { content, suggested_name } => {
+        InputSource::Text {
+            content,
+            suggested_name,
+        } => {
             let markdown_path = session_dir.join("document.md");
             let (copied_images, rewritten) = extract_and_copy_images(&content, None, &assets_dir)?;
-            fs::write(&markdown_path, rewritten).map_err(|e| format!("Failed to write markdown: {}", e))?;
+            fs::write(&markdown_path, rewritten)
+                .map_err(|e| format!("Failed to write markdown: {}", e))?;
 
             Ok(PreparedInput {
                 markdown_path: markdown_path.to_string_lossy().to_string(),
@@ -103,7 +114,8 @@ async fn handle_file_input(
 
     let (markdown_path, base_dir, markdown_files) = if is_archive(&lower_name) {
         let extract_dir = session_dir.join("extracted");
-        fs::create_dir_all(&extract_dir).map_err(|e| format!("Failed to create extract dir: {}", e))?;
+        fs::create_dir_all(&extract_dir)
+            .map_err(|e| format!("Failed to create extract dir: {}", e))?;
 
         extract_archive(input_path, &extract_dir)
             .await
@@ -117,10 +129,13 @@ async fn handle_file_input(
 
         let md_file = extract_dir.join(&selected_rel);
         let target_md = session_dir.join("document.md");
-        fs::copy(&md_file, &target_md)
-            .map_err(|e| format!("Failed to copy markdown: {}", e))?;
+        fs::copy(&md_file, &target_md).map_err(|e| format!("Failed to copy markdown: {}", e))?;
 
-        (target_md, md_file.parent().map(|p| p.to_path_buf()), md_files)
+        (
+            target_md,
+            md_file.parent().map(|p| p.to_path_buf()),
+            md_files,
+        )
     } else {
         // treat as a direct markdown/text file
         let target_md = session_dir.join("document.md");
@@ -135,7 +150,8 @@ async fn handle_file_input(
     let content = fs::read_to_string(&markdown_path)
         .map_err(|e| format!("Failed to read markdown: {}", e))?;
 
-    let (copied_images, rewritten) = extract_and_copy_images(&content, base_dir.as_deref(), assets_dir)?;
+    let (copied_images, rewritten) =
+        extract_and_copy_images(&content, base_dir.as_deref(), assets_dir)?;
     fs::write(&markdown_path, rewritten)
         .map_err(|e| format!("Failed to write processed markdown: {}", e))?;
 
@@ -173,7 +189,11 @@ fn collect_markdown_files(dir: &Path, base: &Path) -> Vec<String> {
     results
 }
 
-fn extract_and_copy_images(content: &str, base_dir: Option<&Path>, assets_dir: &Path) -> Result<(Vec<String>, String), String> {
+fn extract_and_copy_images(
+    content: &str,
+    base_dir: Option<&Path>,
+    assets_dir: &Path,
+) -> Result<(Vec<String>, String), String> {
     let img_regex = Regex::new(r"!\[(?P<alt>[^\]]*)\]\((?P<path>[^)]+)\)")
         .map_err(|e| format!("Failed to compile regex: {}", e))?;
 
@@ -270,5 +290,7 @@ fn build_session_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|e| format!("Time error: {}", e))?
         .as_millis();
 
-    Ok(root.join("format-tools").join(format!("session-{}", millis)))
+    Ok(root
+        .join("format-tools")
+        .join(format!("session-{}", millis)))
 }

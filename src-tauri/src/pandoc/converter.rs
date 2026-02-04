@@ -1,13 +1,13 @@
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use serde_yaml::{Mapping as YamlMapping, Value as YamlValue};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use serde_yaml::{Mapping as YamlMapping, Value as YamlValue};
 use tauri::{AppHandle, Manager};
 
-use super::config::{get_pandoc_executable_path, get_crossref_executable_path};
+use super::config::{get_crossref_executable_path, get_pandoc_executable_path};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConvertOptions {
@@ -16,23 +16,26 @@ pub struct ConvertOptions {
     pub source_dir: Option<String>,
     pub source_name: Option<String>,
     pub reference_doc: Option<String>,
-    pub metadata: Option<Value>,  // Pandoc 元数据对象
+    pub metadata: Option<Value>, // Pandoc 元数据对象
     pub metadata_file: Option<String>,
     pub use_crossref: bool,
 }
 
-pub async fn convert_md_to_docx(app: &AppHandle, options: ConvertOptions) -> Result<String, String> {
+pub async fn convert_md_to_docx(
+    app: &AppHandle,
+    options: ConvertOptions,
+) -> Result<String, String> {
     let pandoc_exe = get_pandoc_executable_path(app)?;
-    
+
     if !pandoc_exe.exists() {
         return Err("Pandoc not installed. Please install it first.".to_string());
     }
-    
+
     // 如果有元数据，先将其写入 Markdown 文件头部
     if let Some(metadata) = &options.metadata {
         inject_metadata_to_markdown(&options.input_file, metadata)?;
     }
-    
+
     let output_path = resolve_output_path(&options);
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent)
@@ -42,25 +45,23 @@ pub async fn convert_md_to_docx(app: &AppHandle, options: ConvertOptions) -> Res
     let mut cmd = Command::new(&pandoc_exe);
 
     // 基本参数
-    cmd.arg(&options.input_file)
-       .arg("-o")
-       .arg(&output_path);
+    cmd.arg(&options.input_file).arg("-o").arg(&output_path);
 
     if let Some(parent) = Path::new(&options.input_file).parent() {
         cmd.current_dir(parent);
     }
-    
+
     // 参考文档（模板）
     let reference_doc_path = options.reference_doc.clone();
     if let Some(ref_doc) = &options.reference_doc {
         cmd.arg("--reference-doc").arg(ref_doc);
     }
-    
+
     // 元数据文件
     if let Some(metadata) = &options.metadata_file {
         cmd.arg("--metadata-file").arg(metadata);
     }
-    
+
     // 使用 crossref 过滤器
     if options.use_crossref {
         let crossref_exe = get_crossref_executable_path(app)?;
@@ -68,11 +69,12 @@ pub async fn convert_md_to_docx(app: &AppHandle, options: ConvertOptions) -> Res
             cmd.arg("-F").arg(crossref_exe);
         }
     }
-    
+
     // 执行转换
-    let output = cmd.output()
+    let output = cmd
+        .output()
         .map_err(|e| format!("Failed to execute pandoc: {}", e))?;
-    
+
     if output.status.success() {
         // 转换成功后，删除 runtime 模板文件
         if let Some(ref_doc) = reference_doc_path {
@@ -81,10 +83,10 @@ pub async fn convert_md_to_docx(app: &AppHandle, options: ConvertOptions) -> Res
                 let _ = fs::remove_file(&ref_path); // 忽略删除错误
             }
         }
-        
+
         // 清理旧的 session 目录（只保留最新5个）
         cleanup_old_sessions(app);
-        
+
         Ok(output_path.to_string_lossy().to_string())
     } else {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -110,8 +112,16 @@ fn resolve_output_path(options: &ConvertOptions) -> PathBuf {
     let base_stem = options
         .source_name
         .as_ref()
-        .and_then(|n| Path::new(n).file_stem().map(|s| s.to_string_lossy().to_string()))
-        .or_else(|| input_path.file_stem().map(|s| s.to_string_lossy().to_string()))
+        .and_then(|n| {
+            Path::new(n)
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+        })
+        .or_else(|| {
+            input_path
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+        })
         .unwrap_or_else(|| "document".to_string());
 
     if let Some(provided) = &options.output_file {
@@ -161,16 +171,16 @@ pub fn check_crossref_installed(app: &AppHandle) -> bool {
 
 pub fn get_pandoc_version(app: &AppHandle) -> Result<String, String> {
     let pandoc_exe = get_pandoc_executable_path(app)?;
-    
+
     if !pandoc_exe.exists() {
         return Err("Pandoc not installed".to_string());
     }
-    
+
     let output = Command::new(&pandoc_exe)
         .arg("--version")
         .output()
         .map_err(|e| format!("Failed to get version: {}", e))?;
-    
+
     if output.status.success() {
         let version_str = String::from_utf8_lossy(&output.stdout);
         Ok(version_str.lines().next().unwrap_or("Unknown").to_string())
@@ -186,9 +196,7 @@ fn inject_metadata_to_markdown(file_path: &str, metadata: &Value) -> Result<(), 
         .map_err(|e| format!("Failed to read markdown file: {}", e))?;
 
     // 如果元数据不是对象则跳过注入
-    let metadata_obj = metadata
-        .as_object()
-        .ok_or("Metadata is not an object")?;
+    let metadata_obj = metadata.as_object().ok_or("Metadata is not an object")?;
 
     // 提取已有 frontmatter（如果存在）
     let lines: Vec<&str> = content.split('\n').collect();
@@ -230,7 +238,11 @@ fn inject_metadata_to_markdown(file_path: &str, metadata: &Value) -> Result<(), 
         lines[body_start_idx..].join("\n")
     };
 
-    let new_content = format!("---\n{}---\n\n{}", merged_yaml, body.trim_start_matches('\n'));
+    let new_content = format!(
+        "---\n{}---\n\n{}",
+        merged_yaml,
+        body.trim_start_matches('\n')
+    );
 
     // 写回文件
     fs::write(file_path, new_content)
@@ -247,7 +259,7 @@ fn cleanup_old_sessions(app: &AppHandle) {
         if !format_tools_dir.exists() {
             return;
         }
-        
+
         // 读取所有 session- 开头的目录
         let mut sessions: Vec<(PathBuf, SystemTime)> = Vec::new();
         if let Ok(entries) = fs::read_dir(&format_tools_dir) {
@@ -267,10 +279,10 @@ fn cleanup_old_sessions(app: &AppHandle) {
                 }
             }
         }
-        
+
         // 按修改时间排序（最新的在前）
         sessions.sort_by(|a, b| b.1.cmp(&a.1));
-        
+
         // 删除超过5个的旧 session
         if sessions.len() > 5 {
             for (path, _) in sessions.iter().skip(5) {
@@ -281,9 +293,11 @@ fn cleanup_old_sessions(app: &AppHandle) {
 }
 
 pub fn delete_all_sessions(app: &AppHandle) -> Result<(), String> {
-    let cache_dir = app.path().cache_dir()
+    let cache_dir = app
+        .path()
+        .cache_dir()
         .map_err(|e| format!("Failed to get cache dir: {}", e))?;
-        
+
     let format_tools_dir = cache_dir.join("format-tools");
     if !format_tools_dir.exists() {
         return Ok(());
@@ -303,4 +317,3 @@ pub fn delete_all_sessions(app: &AppHandle) -> Result<(), String> {
     }
     Ok(())
 }
-

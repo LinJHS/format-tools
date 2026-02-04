@@ -1,48 +1,63 @@
 pub mod config;
-pub mod downloader;
 pub mod converter;
+pub mod downloader;
 pub mod input;
 pub mod templates;
 
-use tauri::{command, Window, AppHandle};
+use tauri::{command, AppHandle, Window};
 
-use config::{PandocConfig, get_pandoc_download_urls, get_crossref_download_urls, get_install_dir};
+use config::{get_crossref_download_urls, get_install_dir, get_pandoc_download_urls, PandocConfig};
+use converter::{
+    check_crossref_installed, check_pandoc_installed, convert_md_to_docx, delete_all_sessions,
+    get_pandoc_version, ConvertOptions,
+};
 use downloader::{download_with_fallback, extract_archive, find_executable_in_dir};
-use converter::{ConvertOptions, convert_md_to_docx, check_pandoc_installed, check_crossref_installed, get_pandoc_version, delete_all_sessions};
-use input::{InputSource, PreparedInput, prepare_input};
-use templates::{TemplateInfo, TemplateListResponse, prepare_template, list_templates as list_templates_impl};
+use input::{prepare_input, InputSource, PreparedInput};
+use templates::{
+    list_templates as list_templates_impl, prepare_template, TemplateInfo, TemplateListResponse,
+};
 
 #[command]
 pub async fn install_pandoc(window: Window, app_handle: AppHandle) -> Result<String, String> {
     let config = PandocConfig::default();
     let urls = get_pandoc_download_urls(&config);
     let install_dir = get_install_dir(&app_handle)?;
-    
+
     // 创建临时下载目录
     let temp_dir = std::env::temp_dir().join("pandoc_download");
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| format!("Failed to create temp directory: {}", e))?;
-    
+
     let archive_name = urls.primary.split('/').last().unwrap();
     let archive_path = temp_dir.join(archive_name);
-    
+
     // 下载
-    download_with_fallback(&urls, &archive_path, window.clone(), "pandoc-download-progress").await?;
-    
+    download_with_fallback(
+        &urls,
+        &archive_path,
+        window.clone(),
+        "pandoc-download-progress",
+    )
+    .await?;
+
     // 解压
     let extract_dir = temp_dir.join("extracted");
     extract_archive(&archive_path, &extract_dir).await?;
-    
+
     // 查找并移动可执行文件
     std::fs::create_dir_all(&install_dir)
         .map_err(|e| format!("Failed to create install directory: {}", e))?;
-    
-    let exe_name = if cfg!(windows) { "pandoc.exe" } else { "pandoc" };
+
+    let exe_name = if cfg!(windows) {
+        "pandoc.exe"
+    } else {
+        "pandoc"
+    };
     if let Some(exe_path) = find_executable_in_dir(&extract_dir, exe_name) {
         let dest_path = install_dir.join(exe_name);
         std::fs::copy(&exe_path, &dest_path)
             .map_err(|e| format!("Failed to copy executable: {}", e))?;
-        
+
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -56,10 +71,10 @@ pub async fn install_pandoc(window: Window, app_handle: AppHandle) -> Result<Str
     } else {
         return Err("Pandoc executable not found in archive".to_string());
     }
-    
+
     // 清理临时文件
     let _ = std::fs::remove_dir_all(&temp_dir);
-    
+
     Ok("Pandoc installed successfully".to_string())
 }
 
@@ -68,29 +83,39 @@ pub async fn install_crossref(window: Window, app_handle: AppHandle) -> Result<S
     let config = PandocConfig::default();
     let urls = get_crossref_download_urls(&config);
     let install_dir = get_install_dir(&app_handle)?;
-    
+
     // 创建临时下载目录
     let temp_dir = std::env::temp_dir().join("crossref_download");
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| format!("Failed to create temp directory: {}", e))?;
-    
+
     let archive_name = urls.primary.split('/').last().unwrap();
     let archive_path = temp_dir.join(archive_name);
-    
+
     // 下载
-    download_with_fallback(&urls, &archive_path, window.clone(), "crossref-download-progress").await?;
-    
+    download_with_fallback(
+        &urls,
+        &archive_path,
+        window.clone(),
+        "crossref-download-progress",
+    )
+    .await?;
+
     // 解压
     let extract_dir = temp_dir.join("extracted");
     extract_archive(&archive_path, &extract_dir).await?;
-    
+
     // 查找并移动可执行文件
-    let exe_name = if cfg!(windows) { "pandoc-crossref.exe" } else { "pandoc-crossref" };
+    let exe_name = if cfg!(windows) {
+        "pandoc-crossref.exe"
+    } else {
+        "pandoc-crossref"
+    };
     if let Some(exe_path) = find_executable_in_dir(&extract_dir, exe_name) {
         let dest_path = install_dir.join(exe_name);
         std::fs::copy(&exe_path, &dest_path)
             .map_err(|e| format!("Failed to copy executable: {}", e))?;
-        
+
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -104,10 +129,10 @@ pub async fn install_crossref(window: Window, app_handle: AppHandle) -> Result<S
     } else {
         return Err("Pandoc-crossref executable not found in archive".to_string());
     }
-    
+
     // 清理临时文件
     let _ = std::fs::remove_dir_all(&temp_dir);
-    
+
     Ok("Pandoc-crossref installed successfully".to_string())
 }
 
@@ -127,18 +152,29 @@ pub fn pandoc_version(app_handle: AppHandle) -> Result<String, String> {
 }
 
 #[command]
-pub async fn convert_markdown(app_handle: AppHandle, options: ConvertOptions) -> Result<String, String> {
+pub async fn convert_markdown(
+    app_handle: AppHandle,
+    options: ConvertOptions,
+) -> Result<String, String> {
     convert_md_to_docx(&app_handle, options).await
 }
 
 #[command]
-pub async fn prepare_input_payload(app_handle: AppHandle, source: InputSource) -> Result<PreparedInput, String> {
+pub async fn prepare_input_payload(
+    app_handle: AppHandle,
+    source: InputSource,
+) -> Result<PreparedInput, String> {
     prepare_input(&app_handle, source).await
 }
 
 #[allow(non_snake_case)]
 #[command]
-pub fn prepare_template_protected(app_handle: AppHandle, templateName: String, isMember: bool, key: String) -> Result<TemplateInfo, String> {
+pub fn prepare_template_protected(
+    app_handle: AppHandle,
+    templateName: String,
+    isMember: bool,
+    key: String,
+) -> Result<TemplateInfo, String> {
     // Tauri v2 expects camelCase param names; use `templateName` here
     prepare_template(&app_handle, &templateName, isMember, key)
 }
@@ -152,4 +188,3 @@ pub fn list_templates(app_handle: AppHandle) -> Result<TemplateListResponse, Str
 pub async fn clear_sessions(app_handle: AppHandle) -> Result<(), String> {
     delete_all_sessions(&app_handle)
 }
-

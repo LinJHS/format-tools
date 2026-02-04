@@ -1,13 +1,13 @@
-use serde::{Serialize, Deserialize};
+use aes::Aes256;
+use cbc::Decryptor;
+use cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager};
 use tauri::path::BaseDirectory;
-use aes::Aes256;
-use cbc::Decryptor;
-use cipher::{KeyIvInit, block_padding::Pkcs7, BlockDecryptMut};
-use sha2::{Digest, Sha256};
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TemplateInfo {
@@ -21,7 +21,12 @@ struct TemplateResource {
     encrypted: bool,
 }
 
-pub fn prepare_template(app_handle: &AppHandle, template_name: &str, encrypted: bool, key_string: String) -> Result<TemplateInfo, String> {
+pub fn prepare_template(
+    app_handle: &AppHandle,
+    template_name: &str,
+    encrypted: bool,
+    key_string: String,
+) -> Result<TemplateInfo, String> {
     // Try to find template in resources
     let resource = find_template_resource(app_handle, template_name, encrypted)?;
 
@@ -34,8 +39,7 @@ pub fn prepare_template(app_handle: &AppHandle, template_name: &str, encrypted: 
         .join("format-tools")
         .join("templates")
         .join("runtime");
-    fs::create_dir_all(&runtime_dir)
-        .map_err(|e| format!("Failed to create runtime dir: {}", e))?;
+    fs::create_dir_all(&runtime_dir).map_err(|e| format!("Failed to create runtime dir: {}", e))?;
 
     let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -60,8 +64,11 @@ pub fn prepare_template(app_handle: &AppHandle, template_name: &str, encrypted: 
     })
 }
 
-fn find_template_resource(app_handle: &AppHandle, template_id: &str, encrypted: bool) -> Result<TemplateResource, String> {
-    
+fn find_template_resource(
+    app_handle: &AppHandle,
+    template_id: &str,
+    encrypted: bool,
+) -> Result<TemplateResource, String> {
     let filename = template_id.to_string();
 
     // 1. Development Environment: Check project root relative paths
@@ -73,7 +80,10 @@ fn find_template_resource(app_handle: &AppHandle, template_id: &str, encrypted: 
 
     for path in &dev_candidates {
         if path.exists() {
-            return Ok(TemplateResource { path: path.clone(), encrypted });
+            return Ok(TemplateResource {
+                path: path.clone(),
+                encrypted,
+            });
         }
     }
 
@@ -81,16 +91,22 @@ fn find_template_resource(app_handle: &AppHandle, template_id: &str, encrypted: 
     // In production, everything is in the 'templates' subdirectory of resources
     let resource_path = app_handle
         .path()
-        .resolve(Path::new("templates").join(&filename), BaseDirectory::Resource)
+        .resolve(
+            Path::new("templates").join(&filename),
+            BaseDirectory::Resource,
+        )
         .ok();
-        
+
     if let Some(path) = resource_path {
         if path.exists() {
             return Ok(TemplateResource { path, encrypted });
         }
     }
 
-    Err(format!("Template '{}' not found in resources/templates", template_id))
+    Err(format!(
+        "Template '{}' not found in resources/templates",
+        template_id
+    ))
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -115,7 +131,7 @@ pub struct TemplateMeta {
 
 pub fn list_templates(_app_handle: &AppHandle) -> Result<TemplateListResponse, String> {
     // DEPRECATED: Metadata is now handled by the frontend importing templates.ts directly.
-    // This function returns empty list to avoid breaking if called, 
+    // This function returns empty list to avoid breaking if called,
     // but should be avoided in favor of frontend config.
     Ok(TemplateListResponse {
         templates: vec![],
