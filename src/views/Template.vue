@@ -121,15 +121,54 @@ const convertMarkdown = async () => {
         // Read markdown content
         const markdownContent = await readTextFile(preparedInput.markdown_path)
         
-        // Fix markdown format with AI
-        const fixedContent = await fixMarkdownFormat({
-          ultraToken: authStore.ultraToken!,
-          markdownContent
-        })
-        
-        // Write fixed content back
-        await writeTextFile(preparedInput.markdown_path, fixedContent)
-        console.log('AI format fixing completed')
+        // Helper to refresh ultra token
+        const refreshUltraToken = async () => {
+             console.log('Refreshing ultra token...')
+             const { fetchMembership } = await import('../auth-private/api/emasAuth')
+             const result = await fetchMembership(authStore.token)
+             if (result.success && result.token) {
+                 authStore.setMemberships(result.memberships || [], result.token)
+                 return result.token
+             }
+             throw new Error('Failed to refresh ultra token')
+        }
+
+        let ultraToken = authStore.ultraToken
+        if (!ultraToken) {
+            try {
+                ultraToken = await refreshUltraToken()
+            } catch (e) {
+                console.warn('Could not refresh ultra token:', e)
+            }
+        }
+
+        if (!ultraToken) {
+            throw new Error('Ultra member token is required')
+        }
+
+        try {
+            // Fix markdown format with AI
+            const fixedContent = await fixMarkdownFormat({
+              ultraToken: ultraToken,
+              markdownContent
+            })
+            
+            // Write fixed content back
+            await writeTextFile(preparedInput.markdown_path, fixedContent)
+            console.log('AI format fixing completed')
+        } catch (firstError) {
+            console.warn('AI fix failed, retrying with new token...', firstError)
+            // Retry once with refreshed token
+            ultraToken = await refreshUltraToken()
+            
+            const fixedContentRetry = await fixMarkdownFormat({
+              ultraToken: ultraToken,
+              markdownContent
+            })
+            
+            await writeTextFile(preparedInput.markdown_path, fixedContentRetry)
+            console.log('AI format fixing completed (after retry)')
+        }
       } catch (aiError) {
         console.error('AI format fixing failed:', aiError)
         error.value = `AI 格式修复失败: ${aiError instanceof Error ? aiError.message : String(aiError)}`
