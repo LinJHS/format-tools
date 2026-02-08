@@ -4,6 +4,16 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build Type'
+        required: true
+        default: 'private'
+        type: choice
+        options:
+          - private
+          - opensource
 
 jobs:
   build:
@@ -19,10 +29,10 @@ jobs:
             args: ''
           - os: macos-latest
             platform: darwin-x86_64
-            args: '--target x86_64-apple-darwin' 
-            # Note: macos-latest is becoming arm64. Explicit x86_64 target or separate matrix for silicon.
-            # For simplicity, assuming x64 mac or universal if configured. 
-            # If user needs aarch64, add another matrix entry.
+            args: '--target x86_64-apple-darwin'
+          - os: macos-latest
+            platform: darwin-aarch64
+            args: '--target aarch64-apple-darwin'
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -47,9 +57,20 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.os == 'macos-latest' && 'x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.os == 'macos-latest' && 'x86_64-apple-darwin,aarch64-apple-darwin' || '' }}
+
+      - name: Determine Build Type
+        id: build-type
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.build_type }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=private" >> $GITHUB_OUTPUT
+          fi
 
       - name: Clone Private Auth Module
+        if: steps.build-type.outputs.type == 'private'
         shell: bash
         env:
           GH_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
@@ -62,7 +83,8 @@ jobs:
       - name: Create Environment File
         shell: bash
         run: |
-          cat > .env.local << EOF
+          if [ "${{ steps.build-type.outputs.type }}" == "private" ]; then
+            cat > .env.local << EOF
           VITE_ENABLE_AUTH=true
           VITE_EMAS_APP_ID=${{ secrets.EMAS_APP_ID }}
           VITE_EMAS_SPACE_ID=${{ secrets.EMAS_SPACE_ID }}
@@ -70,6 +92,12 @@ jobs:
           VITE_EMAS_ENDPOINT=${{ secrets.EMAS_ENDPOINT }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD=${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           EOF
+          else
+            cat > .env.local << EOF
+          VITE_ENABLE_AUTH=false
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD=${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          EOF
+          fi
 
       - name: Install dependencies
         run: pnpm install
@@ -119,7 +147,8 @@ jobs:
           extensions = {
               'windows-x86_64': 'src-tauri/target/release/bundle/nsis/*-setup.exe',
               'linux-x86_64': 'src-tauri/target/release/bundle/appimage/*.AppImage',
-              'darwin-x86_64': 'src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz' 
+              'darwin-x86_64': 'src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz',
+              'darwin-aarch64': 'src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz' 
           }
           # Note: MacOS updater target is usually .app.tar.gz. 
           # .dmg is for user download, updater usually needs the tar.gz.
@@ -187,6 +216,18 @@ jobs:
           with open(f"{platform}.json", "w") as f:
               json.dump(manifest_data, f)
           
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
+          draft: true
+          prerelease: false
+
       - name: Upload Partial Manifest
         uses: actions/upload-artifact@v4
         with:
