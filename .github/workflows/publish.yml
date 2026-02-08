@@ -15,6 +15,9 @@ on:
           - private
           - opensource
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -121,6 +124,13 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip install oss2
+
+      - name: Compress MacOS App (for Updater)
+        if: runner.os == 'macOS'
+        run: |
+          cd src-tauri/target/${{ matrix.platform == 'darwin-aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}/release/bundle/macos/
+          tar -czf format-tools.app.tar.gz format-tools.app
+          cd -
 
       - name: Upload Artifacts to OSS & Prepare Manifest
         shell: python
