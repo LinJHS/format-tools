@@ -152,28 +152,41 @@ jobs:
           # MacOS: .app.tar.gz or .dmg
           
           extensions = {
-              'windows-x86_64': 'src-tauri/target/release/bundle/nsis/*-setup.exe',
-              'linux-x86_64': 'src-tauri/target/release/bundle/appimage/*.AppImage',
-              'darwin-x86_64': 'src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz',
-              'darwin-aarch64': 'src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz' 
+              'windows-x86_64': [
+                  'src-tauri/target/release/bundle/nsis/*-setup.exe',
+                  'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe'
+              ],
+              'linux-x86_64': [
+                  'src-tauri/target/release/bundle/appimage/*.AppImage',
+                  'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage'
+              ],
+              'darwin-x86_64': [
+                  'src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz',
+                  'src-tauri/target/release/bundle/macos/*.app.tar.gz'
+              ],
+              'darwin-aarch64': [
+                  'src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz',
+                  'src-tauri/target/release/bundle/macos/*.app.tar.gz'
+              ]
           }
-          # Note: MacOS updater target is usually .app.tar.gz. 
-          # .dmg is for user download, updater usually needs the tar.gz.
-          # Verify this for Tauri v2. Tauri v2 updater supports .tar.gz / .zip mostly for mac.
-          # If output path is different, glob will fail and we'll see.
+
+          patterns = extensions.get(platform, [])
+          files = []
           
-          pattern = extensions.get(platform)
-          if not pattern:
-              # Fallback search
-              pattern = 'src-tauri/target/release/bundle/*/*'
+          if isinstance(patterns, str):
+              patterns = [patterns]
+              
+          for pattern in patterns:
+              found = glob.glob(pattern)
+              if found:
+                  files.extend(found)
           
-          files = glob.glob(pattern)
           if not files:
-              # Try simpler path for mac/linux if release folder differs
+              # General fallback
               files = glob.glob('src-tauri/target/*/release/bundle/*/*')
-          
+
           # Filter for updater supported extensions
-          valid_exts = ('.exe', '.AppImage', '.tar.gz')
+          valid_exts = ('.exe', '.AppImage', '.tar.gz', '.zip')
           files = [f for f in files if f.endswith(valid_exts) and not f.endswith('.sig')]
           
           if not files:
