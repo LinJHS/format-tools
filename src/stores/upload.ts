@@ -12,7 +12,7 @@ export const useUploadStore = defineStore('upload', () => {
   const files = ref<File[]>([])
   const uploadedFiles = ref<any[]>([])
   const currentStep = ref(1)
-  const mode = ref<'file' | 'text'>('file')
+  const mode = ref<'file' | 'text' | 'batch'>('file')
   const markdownText = ref('')
   const preparedInput = ref<any>(null) // Deprecated: use preparedInputs
   const preparedInputs = ref<any[]>([]) // New: Array of prepared inputs
@@ -35,7 +35,7 @@ export const useUploadStore = defineStore('upload', () => {
     preparedInputs.value = []
   }
 
-  const setMode = (value: 'file' | 'text') => {
+  const setMode = (value: 'file' | 'text' | 'batch') => {
     mode.value = value
   }
 
