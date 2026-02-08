@@ -329,8 +329,26 @@ const isSelected = (template: TemplateMeta) => { return selectedTemplate.value?.
         </div>
       </div>
 
-      <!-- Bucket 2: Authenticated but No Access (Upgrade Prompt) -->
-      <div v-else-if="authEnabled && !hasAccess"
+      <!-- Bucket 2: Not Logged In (Login Prompt) -->
+      <div v-else-if="authEnabled && !authStore.isLoggedIn"
+        class="bg-[linear-gradient(135deg,#eff6ff,#dbeafe)] border-2 border-dashed border-[#60a5fa] rounded-2xl p-10 text-center text-[#1d4ed8]">
+        <div class="text-5xl mb-3">🔒</div>
+        <p class="m-0 font-semibold text-lg mb-2">登录后解锁会员模板</p>
+        <p class="m-0 mt-1 text-[#2563eb] text-sm mb-4">登录账号，畅享海量专业文档模板</p>
+        <button @click="router.push('/login')"
+          class="inline-flex items-center gap-2 bg-[#2563eb] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] transition-colors cursor-pointer border-0 shadow-lg shadow-blue-200">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          立即登录
+        </button>
+      </div>
+
+      <!-- Bucket 3: Authenticated but No Access (Upgrade Prompt) -->
+      <div v-else-if="authEnabled && authStore.isLoggedIn && !hasAccess"
         class="bg-[linear-gradient(135deg,#fdf4ff,#fce7f3)] border-2 border-dashed border-[#f472b6] rounded-2xl p-10 text-center text-[#be185d]">
         <div class="text-5xl mb-3">💎</div>
         <p class="m-0 font-semibold text-lg mb-2">升级会员解锁专业模板</p>
