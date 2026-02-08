@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 export const useDummyAuthStore = defineStore('auth-dummy', () => {
   const isLoggedIn = ref(false)
