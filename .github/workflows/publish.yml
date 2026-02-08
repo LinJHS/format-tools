@@ -1,4 +1,4 @@
-name: Build and Release to Aliyun
+name: Publish
 
 on:
   push:
