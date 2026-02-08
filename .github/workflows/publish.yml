@@ -86,10 +86,17 @@ jobs:
           if [ "${{ steps.build-type.outputs.type }}" == "private" ]; then
             cat > .env.local << EOF
           VITE_ENABLE_AUTH=true
-          VITE_EMAS_APP_ID=${{ secrets.EMAS_APP_ID }}
-          VITE_EMAS_SPACE_ID=${{ secrets.EMAS_SPACE_ID }}
-          VITE_EMAS_CLIENT_SECRET=${{ secrets.EMAS_CLIENT_SECRET }}
-          VITE_EMAS_ENDPOINT=${{ secrets.EMAS_ENDPOINT }}
+          
+          VITE_LOGIN_ENDPOINT=${{ secrets.VITE_LOGIN_ENDPOINT }}
+          VITE_GET_USER_INFO_ENDPOINT=${{ secrets.VITE_GET_USER_INFO_ENDPOINT }}
+          VITE_GET_MEMBERSHIP_GSJ_ENDPOINT=${{ secrets.VITE_GET_MEMBERSHIP_GSJ_ENDPOINT }}
+          VITE_ACTIVATE_MEMBERSHIP_GSJ_ENDPOINT=${{ secrets.VITE_ACTIVATE_MEMBERSHIP_GSJ_ENDPOINT }}
+          VITE_GET_DASHSCOPE_TOKEN_GSJ_ENDPOINT=${{ secrets.VITE_GET_DASHSCOPE_TOKEN_GSJ_ENDPOINT }}
+          
+          VITE_ENCRYPTION_KEY=${{ secrets.VITE_ENCRYPTION_KEY }}
+          VITE_TEMP_API_ENCRYPTION_KEY=${{ secrets.VITE_TEMP_API_ENCRYPTION_KEY }}
+          VITE_TEMPLATE_ENCRYPTION_KEY=${{ secrets.VITE_TEMPLATE_ENCRYPTION_KEY }}
+          
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD=${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           EOF
           else
