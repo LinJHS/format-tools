@@ -195,8 +195,8 @@ jobs:
           auth = oss2.Auth(key_id, key_secret)
           bucket = oss2.Bucket(auth, endpoint, bucket_name)
           
-          # OSS Structure: /gsj/releases/<platform>/<version>/<filename>
-          oss_prefix = f"gsj/releases/{platform}/{c_version}"
+          # OSS Structure: /gsj/releases/<version>/<platform>/<filename>
+          oss_prefix = f"gsj/releases/{c_version}/{platform}"
           
           print(f"Uploading {filename}...")
           bucket.put_object_from_file(f"{oss_prefix}/{filename}", exe_path)
@@ -279,9 +279,6 @@ jobs:
           timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
           
           # Try to get release notes from git tag message (or use placeholder)
-          # GitHub Actions environment doesn't easily expose tag annotation.
-          # We can use a release body if this was a release event, but it's a push tag event.
-          # For now, default to simple notes.
           notes = f"Update to version {c_version}"
           
           final_manifest = {
@@ -317,9 +314,7 @@ jobs:
           auth = oss2.Auth(key_id, key_secret)
           bucket = oss2.Bucket(auth, endpoint, bucket_name)
           
-          # Upload global manifest to gsj/manifest.json
-          # This aligns with the new endpoint: https://sw.linjhs.com/gsj/manifest.json
-          
-          manifest_key = "gsj/manifest.json"
+          # Upload manifest to gsj/releases/<version>/manifest.json
+          manifest_key = f"gsj/releases/{c_version}/manifest.json"
           print(f"Uploading manifest to {manifest_key}...")
           bucket.put_object_from_file(manifest_key, "manifest.json")
