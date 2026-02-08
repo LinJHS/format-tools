@@ -1,7 +1,7 @@
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { ask, message } from '@tauri-apps/plugin-dialog';
-import { sendNotification } from '@tauri-apps/plugin-notification';
+import { sendNotification, isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
 
 export async function checkForAppUpdate(silent = false) {
   try {
@@ -21,10 +21,17 @@ export async function checkForAppUpdate(silent = false) {
 
       if (shouldUpdate) {
         // 2. 发送通知：开始下载
-        sendNotification({
-          title: '格式匠 - 正在更新',
-          body: '更新包正在后台下载中，请稍候...'
-        });
+        let permission = await isPermissionGranted();
+        if (!permission) {
+          permission = await requestPermission() === 'granted';
+        }
+
+        if (permission) {
+          sendNotification({
+            title: '格式匠 - 正在更新',
+            body: '更新包正在后台下载中，请稍候...'
+          });
+        }
 
         // 3. 开始下载 (不监听详细进度，只等待完成)
         await update.download();
