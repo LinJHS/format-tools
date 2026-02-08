@@ -17,12 +17,12 @@ const showClearDialog = ref(false)
 
 // Determine max limit based on membership
 const maxAllowed = computed(() => {
-  if (!authStore.isLoggedIn) return 3
+  if (!authStore.isLoggedIn) return 10
 
   const type = authStore.activeMembership?.membershipType
-  if (type === 'ultra') return 100
-  if (type === 'pro') return 10
-  return 3 // standard/free
+  if (type === 'ultra') return 1000
+  if (type === 'pro') return 30
+  return 10 // standard/free
 })
 
 const membershipLabel = computed(() => {

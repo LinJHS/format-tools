@@ -159,8 +159,8 @@ jobs:
           auth = oss2.Auth(key_id, key_secret)
           bucket = oss2.Bucket(auth, endpoint, bucket_name)
           
-          # OSS Structure: /releases/<platform>/<version>/<filename>
-          oss_prefix = f"releases/{platform}/{c_version}"
+          # OSS Structure: /gsj/releases/<platform>/<version>/<filename>
+          oss_prefix = f"gsj/releases/{platform}/{c_version}"
           
           print(f"Uploading {filename}...")
           bucket.put_object_from_file(f"{oss_prefix}/{filename}", exe_path)
@@ -179,7 +179,7 @@ jobs:
               "platforms": {
                   platform: {
                       "signature": signature_content,
-                      "url": f"{os.environ['BASE_URL']}/{platform}/{c_version}/{filename}"
+                      "url": f"{os.environ['BASE_URL']}/gsj/releases/{platform}/{c_version}/{filename}"
                   }
               }
           }
@@ -228,11 +228,18 @@ jobs:
               return v[1:] if v.startswith('v') else v
               
           c_version = clean_version(os.environ['VERSION'])
-          timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+          timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+          
+          # Try to get release notes from git tag message (or use placeholder)
+          # GitHub Actions environment doesn't easily expose tag annotation.
+          # We can use a release body if this was a release event, but it's a push tag event.
+          # For now, default to simple notes.
+          notes = f"Update to version {c_version}"
           
           final_manifest = {
               "version": c_version,
-              "notes": "Update via GitHub Actions",
+              "name": f"v{c_version}",
+              "notes": notes,
               "pub_date": timestamp,
               "platforms": {}
           }
@@ -262,18 +269,9 @@ jobs:
           auth = oss2.Auth(key_id, key_secret)
           bucket = oss2.Bucket(auth, endpoint, bucket_name)
           
-          # Upload global manifest to /releases/<version>/manifest.json 
-          # AND /releases/windows-x86_64/<version>/manifest.json 
-          # The user's configuration in tauri.conf.json is:
-          # https://sw.linjhs.com/{{target}}/{{current_version}}/manifest.json
-          # So we need to put the manifest in EACH platform folder? 
-          # Or create one master manifest and put it everywhere?
-          # Best practice: One master manifest, duplicated or referenced.
-          # Since tauri.conf.json has {{target}}, it expects the manifest AT the target folder.
+          # Upload global manifest to gsj/manifest.json
+          # This aligns with the new endpoint: https://sw.linjhs.com/gsj/manifest.json
           
-          oss_prefix_base = f"releases"
-          
-          for platform in final_manifest['platforms']:
-              manifest_key = f"{oss_prefix_base}/{platform}/{c_version}/manifest.json"
-              print(f"Uploading manifest to {manifest_key}...")
-              bucket.put_object_from_file(manifest_key, "manifest.json")
+          manifest_key = "gsj/manifest.json"
+          print(f"Uploading manifest to {manifest_key}...")
+          bucket.put_object_from_file(manifest_key, "manifest.json")

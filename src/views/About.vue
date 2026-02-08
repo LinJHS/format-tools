@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { getVersion } from '@tauri-apps/api/app'
+import { useUpdate } from '../composables/useUpdate'
+
+const { checkForUpdates, updateStatus, isUpdating } = useUpdate()
 
 const router = useRouter()
 const douyinCopied = ref(false)
@@ -64,7 +67,13 @@ const goBack = () => {
         格式匠
         <span class="w-10 text-sm text-gray-500 ml-1">版本 v{{ appVersion }}</span>
       </h1>
-      
+      <div class="mt-4 flex flex-col items-center gap-2">
+        <button @click="checkForUpdates(false)" :disabled="isUpdating"
+          class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ isUpdating ? '更新中...' : '检查更新' }}
+        </button>
+        <p v-if="updateStatus" class="text-xs text-gray-500">{{ updateStatus }}</p>
+      </div>
     </div>
 
     <div class="bg-white shadow rounded-lg overflow-hidden divide-y divide-gray-100">
@@ -104,7 +113,8 @@ const goBack = () => {
             </div>
           </div>
           <div class="flex items-center gap-3">
-             <img src="/monticule-avatar.webp" alt="丘原科技" class="w-10 h-10 rounded-full object-cover border border-gray-100">
+            <img src="/monticule-avatar.webp" alt="丘原科技"
+              class="w-10 h-10 rounded-full object-cover border border-gray-100">
             <div>
               <button @click="open(links.author3)" class="font-medium text-gray-800 hover:text-blue-600">@丘原科技</button>
               <p class="text-xs text-gray-500">https://monticule.tech</p>
@@ -119,8 +129,8 @@ const goBack = () => {
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <button @click="open(links.xhs)"
             class="flex items-center gap-2 p-3 rounded-lg bg-red-50 hover:bg-red-100 transition text-red-700">
-            <svg t="1770174510644" class="w-5 h-5 icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
-              p-id="1492" width="24" height="24">
+            <svg t="1770174510644" class="w-5 h-5 icon" viewBox="0 0 1024 1024" version="1.1"
+              xmlns="http://www.w3.org/2000/svg" p-id="1492" width="24" height="24">
               <path
                 d="M1021.72444445 836.54883555V187.48757333C1021.72444445 85.61550222 938.38449778 2.27555555 836.51242667 2.27555555H187.48757333C85.61550222 2.27555555 2.27555555 85.61550222 2.27555555 187.48757333v649.06126222c0 100.85262222 81.70154667 183.57361778 182.2264889 185.1756089h654.9959111c100.48853333-1.60199111 182.22648889-84.28657778 182.2264889-185.1756089"
                 fill="#FF2442" p-id="1493"></path>
@@ -135,8 +145,8 @@ const goBack = () => {
           </button>
           <button @click="open(links.bilibili)"
             class="flex items-center gap-2 p-3 rounded-lg bg-pink-50 hover:bg-pink-100 transition text-pink-600">
-            <svg t="1770174601521" class="w-5 h-5 icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
-              p-id="1644" width="24" height="24">
+            <svg t="1770174601521" class="w-5 h-5 icon" viewBox="0 0 1024 1024" version="1.1"
+              xmlns="http://www.w3.org/2000/svg" p-id="1644" width="24" height="24">
               <path
                 d="M0 0m184.32 0l655.36 0q184.32 0 184.32 184.32l0 655.36q0 184.32-184.32 184.32l-655.36 0q-184.32 0-184.32-184.32l0-655.36q0-184.32 184.32-184.32Z"
                 fill="#EC5D85" p-id="1645"></path>
@@ -166,8 +176,8 @@ const goBack = () => {
           </button>
           <button @click="copyDouyin"
             class="flex items-center gap-2 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition text-gray-700">
-            <svg t="1770174638775" class="w-5 h-5 icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
-              p-id="1805" width="24" height="24">
+            <svg t="1770174638775" class="w-5 h-5 icon" viewBox="0 0 1024 1024" version="1.1"
+              xmlns="http://www.w3.org/2000/svg" p-id="1805" width="24" height="24">
               <path
                 d="M0 0m184.32 0l655.36 0q184.32 0 184.32 184.32l0 655.36q0 184.32-184.32 184.32l-655.36 0q-184.32 0-184.32-184.32l0-655.36q0-184.32 184.32-184.32Z"
                 fill="#111111" p-id="1806"></path>

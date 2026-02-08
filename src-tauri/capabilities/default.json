@@ -31,6 +31,8 @@
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "**" }]
-    }
+    },
+    "process:default",
+    "dialog:default"
   ]
 }
