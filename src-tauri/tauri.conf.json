@@ -35,7 +35,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://sw.linjhs.com/{{target}}/{{current_version}}/manifest.json"
+        "https://sw.linjhs.com/gsj/manifest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGMzIxRjc0QjA2RkY0M0QKUldROTlHK3dkQjh5djkyNDNxMXRMUXhBdUs3OStsaE01b09mYk03UWlaRkQ2S0FlQ2svT2FYQlYK"
     }

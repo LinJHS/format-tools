@@ -1,60 +1,63 @@
-name: Publish Format Tools
+name: Build and Release to Aliyun
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       build_type:
         description: 'Build Type'
         required: true
-        default: 'opensource'
+        default: 'private'
         type: choice
         options:
-          - opensource
           - private
+          - opensource
 
 jobs:
-  build-tauri:
-    permissions:
-      contents: write
+  build:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest'
+          - os: windows-latest
+            platform: windows-x86_64
+            args: ''
+          - os: ubuntu-22.04
+            platform: linux-x86_64
+            args: ''
+          - os: macos-latest
+            platform: darwin-x86_64
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04'
-            args: ''
-          - platform: 'windows-latest'
-            args: ''
+          - os: macos-latest
+            platform: darwin-aarch64
+            args: '--target aarch64-apple-darwin'
 
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 20
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
 
-      - name: Install Rust stable
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
-      - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          targets: ${{ matrix.os == 'macos-latest' && 'x86_64-apple-darwin,aarch64-apple-darwin' || '' }}
 
       - name: Determine Build Type
         id: build-type
@@ -72,58 +75,246 @@ jobs:
         env:
           GH_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
         run: |
-          cd "Format Tools/src"
-          git clone https://$GH_PAT@github.com/LinJHS/format-tools-auth-private.git auth-private
+          cd src
+          if [ -n "$GH_PAT" ]; then
+             git clone https://$GH_PAT@github.com/LinJHS/format-tools-auth-private.git auth-private
+          fi
 
-      - name: Create Environment File (Private Build)
-        if: steps.build-type.outputs.type == 'private'
+      - name: Create Environment File
         shell: bash
-        working-directory: Format Tools
         run: |
-          cat > .env.local << EOF
+          if [ "${{ steps.build-type.outputs.type }}" == "private" ]; then
+            cat > .env.local << EOF
           VITE_ENABLE_AUTH=true
-          VITE_EMAS_APP_ID=${{ secrets.EMAS_APP_ID }}
-          VITE_EMAS_SPACE_ID=${{ secrets.EMAS_SPACE_ID }}
-          VITE_EMAS_CLIENT_SECRET=${{ secrets.EMAS_CLIENT_SECRET }}
-          VITE_EMAS_ENDPOINT=${{ secrets.EMAS_ENDPOINT }}
+          
+          VITE_LOGIN_ENDPOINT=${{ secrets.VITE_LOGIN_ENDPOINT }}
+          VITE_GET_USER_INFO_ENDPOINT=${{ secrets.VITE_GET_USER_INFO_ENDPOINT }}
+          VITE_GET_MEMBERSHIP_GSJ_ENDPOINT=${{ secrets.VITE_GET_MEMBERSHIP_GSJ_ENDPOINT }}
+          VITE_ACTIVATE_MEMBERSHIP_GSJ_ENDPOINT=${{ secrets.VITE_ACTIVATE_MEMBERSHIP_GSJ_ENDPOINT }}
+          VITE_GET_DASHSCOPE_TOKEN_GSJ_ENDPOINT=${{ secrets.VITE_GET_DASHSCOPE_TOKEN_GSJ_ENDPOINT }}
+          
+          VITE_ENCRYPTION_KEY=${{ secrets.VITE_ENCRYPTION_KEY }}
+          VITE_TEMP_API_ENCRYPTION_KEY=${{ secrets.VITE_TEMP_API_ENCRYPTION_KEY }}
+          VITE_TEMPLATE_ENCRYPTION_KEY=${{ secrets.VITE_TEMPLATE_ENCRYPTION_KEY }}
+          
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD=${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           EOF
-
-      - name: Create Environment File (Open Source Build)
-        if: steps.build-type.outputs.type == 'opensource'
-        shell: bash
-        working-directory: Format Tools
-        run: |
-          cat > .env.local << EOF
+          else
+            cat > .env.local << EOF
           VITE_ENABLE_AUTH=false
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD=${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           EOF
+          fi
 
-      - name: Install frontend dependencies
-        working-directory: Format Tools
+      - name: Install dependencies
         run: pnpm install
 
       - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: app-v__VERSION__
-          releaseName: 'Format Tools v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: true
-          prerelease: false
-          projectPath: Format Tools
-          args: ${{ matrix.args }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          pnpm tauri build ${{ matrix.args }}
 
-# Required GitHub Secrets:
-# For private builds:
-#   - PRIVATE_REPO_PAT: Personal Access Token with repo scope (for cloning private repo)
-#   - EMAS_APP_ID: Your EMAS application ID
-#   - EMAS_SPACE_ID: Your EMAS space ID
-#   - EMAS_CLIENT_SECRET: Your EMAS client secret
-#   - EMAS_ENDPOINT: EMAS API endpoint
-#
-# Notes:
-# - For open source builds: set VITE_ENABLE_AUTH=false, no auth module cloned
-# - For private builds: set VITE_ENABLE_AUTH=true, clone auth-private, inject EMAS credentials
-# - Tag push triggers private build by default
-# - Manual workflow_dispatch allows choosing build type
+      - name: Install Python & OSS2
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - run: pip install oss2
+
+      - name: Upload Artifacts to OSS & Prepare Manifest
+        shell: python
+        env:
+          OSS_KEY_ID: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}
+          OSS_KEY_SECRET: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
+          OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+          OSS_ENDPOINT: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
+          VERSION: ${{ github.ref_name }}
+          PLATFORM: ${{ matrix.platform }}
+          BASE_URL: https://sw.linjhs.com
+        run: |
+          import os
+          import glob
+          import json
+          import oss2
+          from datetime import datetime
+
+          def clean_version(v):
+              return v[1:] if v.startswith('v') else v
+
+          platform = os.environ['PLATFORM']
+          tag_version = os.environ['VERSION']
+          c_version = clean_version(tag_version)
+          
+          # Find Artifacts
+          # Windows: .exe
+          # Linux: .AppImage or .deb (Tauri v2 defaults to AppImage usually for updater?)
+          # MacOS: .app.tar.gz or .dmg
+          
+          extensions = {
+              'windows-x86_64': 'src-tauri/target/release/bundle/nsis/*-setup.exe',
+              'linux-x86_64': 'src-tauri/target/release/bundle/appimage/*.AppImage',
+              'darwin-x86_64': 'src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz',
+              'darwin-aarch64': 'src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz' 
+          }
+          # Note: MacOS updater target is usually .app.tar.gz. 
+          # .dmg is for user download, updater usually needs the tar.gz.
+          # Verify this for Tauri v2. Tauri v2 updater supports .tar.gz / .zip mostly for mac.
+          # If output path is different, glob will fail and we'll see.
+          
+          pattern = extensions.get(platform)
+          if not pattern:
+              # Fallback search
+              pattern = 'src-tauri/target/release/bundle/*/*'
+          
+          files = glob.glob(pattern)
+          if not files:
+              # Try simpler path for mac/linux if release folder differs
+              files = glob.glob('src-tauri/target/*/release/bundle/*/*')
+          
+          # Filter for updater supported extensions
+          valid_exts = ('.exe', '.AppImage', '.tar.gz')
+          files = [f for f in files if f.endswith(valid_exts) and not f.endswith('.sig')]
+          
+          if not files:
+              print(f"Error: No artifacts found for {platform}")
+              exit(1)
+              
+          exe_path = files[0] # Pick first
+          sig_path = f"{exe_path}.sig"
+          filename = os.path.basename(exe_path)
+          
+          print(f"Found: {exe_path}")
+
+          # Upload to OSS
+          key_id = os.environ['OSS_KEY_ID']
+          key_secret = os.environ['OSS_KEY_SECRET']
+          bucket_name = os.environ['OSS_BUCKET']
+          endpoint = os.environ['OSS_ENDPOINT']
+          
+          auth = oss2.Auth(key_id, key_secret)
+          bucket = oss2.Bucket(auth, endpoint, bucket_name)
+          
+          # OSS Structure: /gsj/releases/<version>/<platform>/<filename>
+          oss_prefix = f"gsj/releases/{c_version}/{platform}"
+          
+          print(f"Uploading {filename}...")
+          bucket.put_object_from_file(f"{oss_prefix}/{filename}", exe_path)
+          
+          if os.path.exists(sig_path):
+              print(f"Uploading signature...")
+              bucket.put_object_from_file(f"{oss_prefix}/{filename}.sig", sig_path)
+              with open(sig_path, 'r') as f:
+                  signature_content = f.read().strip()
+          else:
+              print("Warning: No signature file found!")
+              signature_content = ""
+
+          # Create Partial Manifest
+          manifest_data = {
+              "platforms": {
+                  platform: {
+                      "signature": signature_content,
+                      "url": f"{os.environ['BASE_URL']}/gsj/releases/{platform}/{c_version}/{filename}"
+                  }
+              }
+          }
+          
+          with open(f"{platform}.json", "w") as f:
+              json.dump(manifest_data, f)
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
+          draft: true
+          prerelease: false
+
+      - name: Upload Partial Manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-${{ matrix.platform }}
+          path: ${{ matrix.platform }}.json
+
+  publish-manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Manifests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: manifest-*
+          merge-multiple: true
+          
+      - name: Install Python & OSS2
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - run: pip install oss2
+
+      - name: Merge and Upload Manifest
+        shell: python
+        env:
+          OSS_KEY_ID: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}
+          OSS_KEY_SECRET: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
+          OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+          OSS_ENDPOINT: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
+          VERSION: ${{ github.ref_name }}
+          BASE_URL: https://sw.linjhs.com
+        run: |
+          import os
+          import json
+          import oss2
+          from datetime import datetime
+
+          def clean_version(v):
+              return v[1:] if v.startswith('v') else v
+              
+          c_version = clean_version(os.environ['VERSION'])
+          timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+          
+          # Try to get release notes from git tag message (or use placeholder)
+          notes = f"Update to version {c_version}"
+          
+          final_manifest = {
+              "version": c_version,
+              "name": f"v{c_version}",
+              "notes": notes,
+              "pub_date": timestamp,
+              "platforms": {}
+          }
+          
+          # Merge all partial JSONs
+          for file in os.listdir('.'):
+              if file.endswith('.json') and file != 'manifest.json':
+                  try:
+                      with open(file, 'r') as f:
+                          data = json.load(f)
+                          final_manifest['platforms'].update(data.get('platforms', {}))
+                  except Exception as e:
+                      print(f"Skipping {file}: {e}")
+          
+          print("Final Manifest:")
+          print(json.dumps(final_manifest, indent=2))
+          
+          with open("manifest.json", "w") as f:
+              json.dump(final_manifest, f)
+              
+          # Upload to OSS
+          key_id = os.environ['OSS_KEY_ID']
+          key_secret = os.environ['OSS_KEY_SECRET']
+          bucket_name = os.environ['OSS_BUCKET']
+          endpoint = os.environ['OSS_ENDPOINT']
+          
+          auth = oss2.Auth(key_id, key_secret)
+          bucket = oss2.Bucket(auth, endpoint, bucket_name)
+          
+          # Upload manifest to gsj/releases/<version>/manifest.json
+          manifest_key = f"gsj/releases/{c_version}/manifest.json"
+          print(f"Uploading manifest to {manifest_key}...")
+          bucket.put_object_from_file(manifest_key, "manifest.json")
