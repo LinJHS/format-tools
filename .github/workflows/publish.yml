@@ -122,12 +122,7 @@ jobs:
           python-version: '3.x'
       - run: pip install oss2
 
-      - name: Compress MacOS App (for Updater)
-        if: runner.os == 'macOS'
-        run: |
-          cd src-tauri/target/universal-apple-darwin/release/bundle/macos/
-          tar -czf format-tools.app.tar.gz format-tools.app
-          cd -
+
 
       - name: Upload Artifacts to OSS & Prepare Manifest
         shell: python
