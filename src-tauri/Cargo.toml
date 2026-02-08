@@ -1,7 +1,7 @@
 [package]
 name = "format-tools"
 version = "0.1.12"
-description = "鏍煎紡鍖?- 鎮ㄧ殑鍏ㄨ兘鏂囨。杞崲宸ュ叿"
+description = "格式匠 - 您的全能文档转换工具"
 authors = ["LinJHS"]
 edition = "2021"
 
