@@ -139,6 +139,7 @@ jobs:
           import glob
           import json
           import oss2
+          import urllib.parse
           from datetime import datetime
 
           def clean_version(v):
@@ -221,7 +222,7 @@ jobs:
               "platforms": {
                   platform: {
                       "signature": signature_content,
-                      "url": f"{os.environ['BASE_URL']}/gsj/releases/{platform}/{c_version}/{filename}"
+                      "url": f"{os.environ['BASE_URL']}/gsj/releases/{platform}/{c_version}/{urllib.parse.quote(filename)}"
                   }
               }
           }

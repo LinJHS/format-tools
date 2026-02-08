@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "format-tools",
-  "version": "0.1.10",
+  "version": "0.1.9",
   "identifier": "com.linjhs.format-tools",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "format-tools",
+        "title": "格式匠",
         "width": 800,
         "height": 600
       }
@@ -35,6 +35,9 @@
   },
   "plugins": {
     "updater": {
+      "windows": {
+        "installMode": "passive"
+      },
       "endpoints": [
         "https://sw.linjhs.com/gsj/manifest.json"
       ],
