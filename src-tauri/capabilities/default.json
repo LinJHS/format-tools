@@ -35,6 +35,8 @@
     "process:default",
     "dialog:default",
     "updater:default",
-    "notification:default"
+    "notification:default",
+    "core:menu:default",
+    "core:menu:allow-popup"
   ]
 }

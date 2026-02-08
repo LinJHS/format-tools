@@ -2,6 +2,9 @@
 import { onMounted } from 'vue'
 import Navbar from './components/Navbar.vue'
 import { checkForAppUpdate } from './composables/useUpdate'
+import { useContextMenu } from './composables/useContextMenu'
+
+useContextMenu()
 
 onMounted(() => {
   // Silent check on startup
