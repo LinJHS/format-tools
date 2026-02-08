@@ -3,9 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { getVersion } from '@tauri-apps/api/app'
-import { useUpdate } from '../composables/useUpdate'
-
-const { checkForUpdates, updateStatus, isUpdating } = useUpdate()
+import { checkForAppUpdate } from '../composables/useUpdate'
 
 const router = useRouter()
 const douyinCopied = ref(false)
@@ -14,6 +12,10 @@ const appVersion = ref('')
 onMounted(async () => {
   appVersion.value = await getVersion()
 })
+
+const handleCheckUpdate = async () => {
+    await checkForAppUpdate(false)
+}
 
 const links = {
   repo: 'https://github.com/LinJHS/format-tools',
@@ -68,11 +70,10 @@ const goBack = () => {
         <span class="w-10 text-sm text-gray-500 ml-1">版本 v{{ appVersion }}</span>
       </h1>
       <div class="mt-4 flex flex-col items-center gap-2">
-        <button @click="checkForUpdates(false)" :disabled="isUpdating"
-          class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition disabled:opacity-50 disabled:cursor-not-allowed">
-          {{ isUpdating ? '更新中...' : '检查更新' }}
+        <button @click="handleCheckUpdate"
+          class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition">
+          检查更新
         </button>
-        <p v-if="updateStatus" class="text-xs text-gray-500">{{ updateStatus }}</p>
       </div>
     </div>
 

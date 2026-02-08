@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import Navbar from './components/Navbar.vue'
-import { useUpdate } from './composables/useUpdate'
-
-const { checkForUpdates } = useUpdate()
+import { checkForAppUpdate } from './composables/useUpdate'
 
 onMounted(() => {
   // Silent check on startup
-  checkForUpdates(true)
+  checkForAppUpdate(true)
 })
 </script>
 

@@ -33,6 +33,8 @@
       "allow": [{ "path": "**" }]
     },
     "process:default",
-    "dialog:default"
+    "dialog:default",
+    "updater:default",
+    "notification:default"
   ]
 }
