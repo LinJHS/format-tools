@@ -294,7 +294,6 @@ jobs:
           
           final_manifest = {
               "version": c_version,
-              "name": f"v{c_version}",
               "notes": notes,
               "pub_date": timestamp,
               "platforms": {}
