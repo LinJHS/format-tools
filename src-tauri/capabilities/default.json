@@ -5,6 +5,34 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://linjhs.com/**" },
+        { "url": "https://linjhs.com" },
+        { "url": "https://monticule.tech" },
+        { "url": "https://github.com/linjhs/**" },
+        { "url": "https://github.com/LinJHS/**" },
+        { "url": "https://b23.tv/jHy9JyW" },
+        { "url": "https://xhslink.com/m/51oKk1reGIi" }
+      ]
+    },
+    {
+      "identifier": "opener:allow-reveal-item-in-dir",
+      "allow": [{ "path": "**" }]
+    },
+    "fs:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "**" }]
+    },
+    "process:default",
+    "dialog:default"
   ]
 }

@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { openUrl } from '@tauri-apps/plugin-opener'
+import { useSafeAuthStore } from '../auth/authWrapper'
+import { LINKS } from '../config/links'
 
 const router = useRouter()
-const isLoggedIn = ref(false) // TODO: 后续接入真实登录状态
+const authStore = useSafeAuthStore()
+const isLoggedIn = computed(() => authStore.isLoggedIn)
+const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
 
 const features = [
   {
@@ -32,19 +37,23 @@ const startConvert = () => {
   router.push('/upload')
 }
 
-const goToLogin = () => {
-  window.open('https://linjhs.com/login', '_blank')
+const goToLogin = async () => {
+  if (authEnabled) {
+    router.push('/login')
+  } else {
+    await openUrl(LINKS.login)
+  }
 }
 
-const goToRegister = () => {
-  window.open('https://linjhs.com/signup', '_blank')
+const goToRegister = async () => {
+  await openUrl(LINKS.signup)
 }
 </script>
 
 <template>
   <div class="home-container">
     <!-- Hero Section -->
-    <section class="hero-section bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white py-12">
+    <section class="hero-section bg-linear-to-br from-purple-600 via-indigo-600 to-blue-600 text-white py-12">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center">
           <h1 class="text-4xl md:text-5xl font-bold mb-4 animate-fade-in">
@@ -65,7 +74,7 @@ const goToRegister = () => {
               开始转换 →
             </button>
             
-            <div v-if="!isLoggedIn" class="flex gap-3">
+            <div v-if="authEnabled && !isLoggedIn" class="flex gap-3">
               <button 
                 @click="goToLogin"
                 class="bg-transparent border-2 border-white text-white px-5 py-3 rounded-lg text-base font-semibold hover:bg-white/10 transition-all"
@@ -85,9 +94,9 @@ const goToRegister = () => {
     </section>
 
     <!-- Login Notice for Non-logged Users -->
-    <section v-if="!isLoggedIn" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 max-w-4xl mx-auto mt-6 rounded-r-lg">
+    <section v-if="authEnabled && !isLoggedIn" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 max-w-4xl mx-auto rounded-r-lg">
       <div class="flex items-start">
-        <div class="flex-shrink-0">
+        <div class="shrink-0">
           <svg class="h-6 w-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
           </svg>
@@ -133,7 +142,7 @@ const goToRegister = () => {
     </section>
 
     <!-- Membership Section -->
-    <section class="py-12 bg-gradient-to-br from-gray-50 to-gray-100">
+    <section class="py-12 bg-linear-to-br from-gray-50 to-gray-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
           <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
@@ -167,7 +176,7 @@ const goToRegister = () => {
                   <span class="text-gray-700">基础模板</span>
                 </li>
               </ul>
-              <button class="w-full bg-gray-200 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+              <button @click="startConvert" class="w-full bg-gray-200 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
                 免费使用
               </button>
             </div>
@@ -206,7 +215,7 @@ const goToRegister = () => {
                 </li>
               </ul>
               <button 
-                @click="() => window.open('https://linjhs.com/shop/products', '_blank')"
+                @click="async () => await openUrl(LINKS.shop)"
                 class="w-full bg-purple-600 text-white py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
               >
                 立即购买
@@ -218,7 +227,7 @@ const goToRegister = () => {
           <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div class="p-6">
               <h3 class="text-xl font-bold text-gray-900 mb-2">大师版</h3>
-              <p class="text-gray-600 mb-4">适合团队和企业</p>
+              <p class="text-gray-600 mb-4">适合团队</p>
               <div class="mb-5">
                 <span class="text-3xl font-bold text-gray-900">¥26.9</span>
                 <span class="text-gray-600">/月</span>
@@ -240,11 +249,11 @@ const goToRegister = () => {
                   <svg class="w-5 h-5 text-green-500 mt-1 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                   </svg>
-                  <span class="text-gray-700">自定义模板生成</span>
+                  <span class="text-gray-700">优先技术支持</span>
                 </li>
               </ul>
               <button 
-                @click="() => window.open('https://linjhs.com/shop/products', '_blank')"
+                @click="async () => await openUrl(LINKS.shop)"
                 class="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
               >
                 立即购买
@@ -256,7 +265,7 @@ const goToRegister = () => {
     </section>
 
     <!-- CTA Section -->
-    <section class="py-12 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+    <section class="py-12 bg-linear-to-r from-purple-600 to-indigo-600 text-white">
       <div class="max-w-4xl mx-auto text-center px-4">
         <h2 class="text-2xl md:text-3xl font-bold mb-4">
           准备好开始了吗？

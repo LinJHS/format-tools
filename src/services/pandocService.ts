@@ -1,12 +1,59 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+// @ts-ignore
+import templatesConfig from '../config/templates'
 
 export interface ConvertOptions {
   input_file: string
-  output_file: string
+  output_file?: string
+  source_dir?: string
+  source_name?: string
   reference_doc?: string
+  metadata?: Record<string, any>  // Pandoc 元数据对象
   metadata_file?: string
   use_crossref: boolean
+}
+
+export type InputSourceType = 'file' | 'text'
+
+export interface PrepareInputPayload {
+  source_type: InputSourceType
+  path?: string
+  original_name?: string
+  selected_markdown?: string
+  content?: string
+  suggested_name?: string
+}
+
+export interface PreparedInput {
+  markdown_path: string
+  assets_dir: string
+  image_count: number
+  copied_images: string[]
+  markdown_files: string[]
+  source_name?: string
+  source_dir?: string
+}
+
+export interface TemplateInfo {
+  reference_doc: string
+  protected_path: string
+}
+
+import type { TemplateConfig } from '../types/templateConfig'
+
+export interface TemplateMeta {
+  id: string
+  name: string
+  description: string
+  category: string
+  member: boolean
+  defaultPreset?: Partial<TemplateConfig>
+}
+
+export interface TemplateListResponse {
+  templates: TemplateMeta[]
+  has_premium: boolean
 }
 
 export interface DownloadProgress {
@@ -104,5 +151,42 @@ export const pandocService = {
     if (!crossrefInstalled) {
       await this.installCrossref(onCrossrefProgress)
     }
+  },
+
+  /**
+   * 预处理输入，提取 Markdown 及图片到临时目录
+   */
+  async prepareInput(payload: PrepareInputPayload): Promise<PreparedInput> {
+    return await invoke<PreparedInput>('prepare_input_payload', { source: payload })
+  },
+
+  /**
+   * 准备模板，返回可用的运行时路径
+   */
+  async prepareTemplate(templateName: string, isMember: boolean): Promise<TemplateInfo> {
+    // Pass local encryption key if available, otherwise empty string (ok for free templates)
+    const key = import.meta.env.VITE_TEMPLATE_ENCRYPTION_KEY || "";
+    
+    // Tauri v2 maps snake_case to camelCase in command args; Rust expects `templateName`.
+    return await invoke<TemplateInfo>('prepare_template_protected', { 
+      templateName, 
+      isMember,
+      key 
+    })
+  },
+
+  /**
+   * 获取模板列表元数据
+   */
+  async getTemplates(): Promise<TemplateListResponse> {
+    // Use imported configuration directly instead of calling backend
+    const config = templatesConfig as { version: number, templates: TemplateMeta[] };
+    const templates = config.templates || [];
+    const has_premium = templates.some(t => t.member);
+    
+    return Promise.resolve({
+      templates,
+      has_premium
+    })
   }
 }

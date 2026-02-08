@@ -1,137 +1,274 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { openUrl } from '@tauri-apps/plugin-opener'
+import { useSafeAuthStore } from '../auth/authWrapper'
+import { LINKS } from '../config/links'
 
-const isLoggedIn = ref(false) // TODO: 后续接入真实登录状态
-const userName = ref('未登录')
-const userEmail = ref('')
-const membershipLevel = ref('基础版')
+const router = useRouter()
+const authStore = useSafeAuthStore()
 
-const goToLogin = () => {
-  window.open('https://linjhs.com/login', '_blank')
+const authEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true'
+const isLoggedIn = computed(() => authStore.isLoggedIn)
+const userName = computed(() => authStore.user?.displayName || '未登录')
+const userId = computed(() => {
+  if (!authStore.user) return ''
+  // Try common ID fields
+  return authStore.user.userId || ''
+})
+const userAvatar = computed(() => {
+  const avatar = authStore.user?.avatar || ''
+  if (avatar.startsWith('https://linjhs.com')) {
+    return avatar
+  } else if (avatar) {
+    return `https://linjhs.com${avatar}`
+  }
+  return ''
+})
+
+const activeMembership = computed(() => authStore.activeMembership)
+
+const membershipBadge = computed(() => {
+  if (!activeMembership.value) return null
+  if (activeMembership.value.membershipType === 'ultra') {
+    return { label: '大师版', color: 'bg-linear-to-r from-amber-400 to-amber-600' }
+  }
+  if (activeMembership.value.membershipType === 'pro') {
+    return { label: '专业版', color: 'bg-linear-to-r from-amber-400 to-amber-600' }
+  }
+  return null
+})
+
+const buttonLabel = computed(() => {
+  return activeMembership.value ? '续费会员' : '购买会员'
+})
+
+const goToLogin = async () => {
+  if (authEnabled) {
+    router.push('/login')
+  } else {
+    await openUrl(LINKS.login)
+  }
 }
 
-const goToShop = () => {
-  window.open('https://linjhs.com/shop/products', '_blank')
+const goToShop = async () => {
+  await openUrl(LINKS.shop)
 }
 
-const menuItems = [
-  { icon: '👤', title: '个人信息', description: '查看和管理您的账户信息' },
-  { icon: '💎', title: '会员中心', description: '升级会员，解锁更多功能' },
-  { icon: '📊', title: '转换历史', description: '查看您的文档转换记录' },
-  { icon: '⚙️', title: '设置', description: '自定义您的使用偏好' },
-  { icon: 'ℹ️', title: '关于我们', description: '了解格式匠的更多信息' },
-]
+const navigateTo = (path: string) => {
+  router.push(path)
+}
+
 </script>
 
 <template>
-  <div class="profile-container min-h-screen bg-gray-50 py-6">
+  <div class="profile-container min-h-[calc(100vh-56px)] bg-gray-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- User Card -->
-      <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 h-28"></div>
-        <div class="px-6 pb-6">
-          <div class="flex items-end -mt-16 mb-6">
-            <div class="w-28 h-28 rounded-full bg-white shadow-lg flex items-center justify-center text-4xl border-4 border-white">
-              {{ isLoggedIn ? '👤' : '🔒' }}
-            </div>
-          </div>
-          
-          <div v-if="!isLoggedIn" class="text-center py-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-3">您还未登录</h2>
-            <p class="text-gray-600 mb-5 text-sm">登录后可以查看会员信息、转换历史等更多功能</p>
-            <div class="flex gap-3 justify-center">
-              <button 
-                @click="goToLogin"
-                class="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-              >
-                立即登录
-              </button>
-              <button 
-                @click="() => window.open('https://linjhs.com/signup', '_blank')"
-                class="bg-gray-200 text-gray-700 px-6 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-              >
-                注册账号
-              </button>
+      <div v-if="!authEnabled" class="bg-white rounded-2xl shadow-lg p-10 text-center text-gray-700 mb-6">
+        <h2 class="text-xl font-bold mb-3">当前为开源版本</h2>
+        <p class="text-sm">登录 / 注册功能未启用。</p>
+      </div>
+
+      <template v-else>
+        <!-- User Card -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+          <!-- Header (Shared) -->
+          <div class="bg-blue-600 h-16 flex items-center px-6">
+            <!-- Spacer for avatar alignment -->
+            <div class="w-28 mr-4 shrink-0"></div>
+            <!-- Username: Top Right (White Text) -->
+            <div v-if="isLoggedIn" class="flex flex-col gap-0.5">
+              <div class="flex items-center gap-3">
+                <div v-if="membershipBadge" :class="`${membershipBadge.color} px-3 py-1 rounded-full text-white font-bold text-sm`">
+                  {{ membershipBadge.label }}
+                </div>
+                <h2 class="text-2xl font-bold text-white leading-tight">{{ userName }}</h2>
+                
+                <div v-if="userId" class="text-xs text-white/70 pl-1 pt-3 font-mono">
+                  UID: {{ userId }}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div v-else>
-            <h2 class="text-xl font-bold text-gray-900 mb-2">{{ userName }}</h2>
-            <p class="text-gray-600 mb-3 text-sm">{{ userEmail }}</p>
-            <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-semibold">
-              <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+          <!-- Body Content -->
+          <div class="px-6 pb-8">
+            <!-- Avatar Row: Overlaps header (-mt-14 aligns center 7rem avatar on line) -->
+            <div class="flex items-end -mt-10 relative z-10">
+              <div class="w-28 h-28 rounded-full bg-white shadow-lg border-4 border-white overflow-hidden shrink-0">
+                <img v-if="userAvatar" :src="userAvatar" alt="User Avatar" class="w-full h-full object-cover" />
+                <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-full h-full text-gray-400">
+                  <g fill="#888888" fill-opacity="0" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2">
+                    <path stroke-dasharray="22"
+                      d="M12 5c1.66 0 3 1.34 3 3c0 1.66 -1.34 3 -3 3c-1.66 0 -3 -1.34 -3 -3c0 -1.66 1.34 -3 3 -3Z">
+                      <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.5s" values="22;0" />
+                      <animate fill="freeze" attributeName="fill-opacity" begin="1.1s" dur="0.4s" to="1" />
+                    </path>
+                    <path stroke-dasharray="38" stroke-dashoffset="38" d="M12 14c4 0 7 2 7 3v2h-14v-2c0 -1 3 -3 7 -3Z">
+                      <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.5s" dur="0.5s" to="0" />
+                      <animate fill="freeze" attributeName="fill-opacity" begin="1.1s" dur="0.4s" to="1" />
+                    </path>
+                  </g>
+                </svg>
+              </div>
+
+              <!-- Action Buttons (Logged In): Bottom Right -->
+              <div v-if="isLoggedIn" class="flex-1 ml-4 mb-2 flex items-end justify-between pb-1">
+                <!-- Left: Status/Expiry -->
+                <div class="mb-6 ml-2">
+                  <span v-if="activeMembership" class="text-[14px] text-gray-500 font-medium">
+                    {{ new Date(activeMembership.endDate).toLocaleDateString('zh-CN') }} 到期
+                  </span>
+                  <span v-else class="text-[14px] text-gray-500">暂无会员</span>
+                </div>
+
+                <!-- Right: Button & Link -->
+                <div class="flex flex-col items-end gap-1">
+                  <button @click="goToShop"
+                    class="group relative overflow-hidden bg-linear-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-1.5 rounded-full font-semibold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 text-[14px]">
+                    <span class="relative z-10 flex items-center gap-1">
+                      <svg class="w-3 h-3 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                      {{ buttonLabel }}
+                    </span>
+                  </button>
+                  <div @click="navigateTo('/membership-center')" class="mt-1 -mb-6 text-[12px] text-gray-500 hover:text-blue-600 cursor-pointer flex items-center gap-0.5 transition-colors pr-1">
+                    5项专属权益
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Logged Out Prompt -->
+            <div v-if="!isLoggedIn" class="text-center -mt-12">
+              <h2 class="text-xl font-bold text-gray-900 mb-3">您还未登录</h2>
+              <p class="text-gray-600 mb-5 text-sm">登录后可以查看会员信息、转换历史等更多功能</p>
+              <div class="flex gap-3 justify-center">
+                <button @click="goToLogin"
+                  class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                  立即登录
+                </button>
+                <button @click="async () => await openUrl(LINKS.signup)"
+                  class="bg-gray-200 text-gray-700 px-6 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                  注册账号
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Menu List (Auth Only Items) -->
+        <div v-if="isLoggedIn" class="bg-white rounded-t-md shadow-md overflow-hidden border-b border-gray-200">
+          <div class="divide-y divide-gray-200">
+            <!-- Item: Personal Info -->
+            <div
+              class="hover:bg-gray-50 transition-all cursor-pointer p-4 flex items-center"
+              @click="navigateTo('/personal-info')">
+              <div class="text-gray-500 mr-4">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              </div>
+              <div class="flex-1 font-medium text-gray-900">个人信息</div>
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+
+            <!-- Item: Member Center -->
+            <div
+              class="hover:bg-gray-50 transition-all cursor-pointer p-4 flex items-center"
+              @click="navigateTo('/membership-center')">
+              <div class="text-gray-500 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+              </div>
+              <div class="flex-1 font-medium text-gray-900">会员中心</div>
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+          </div>
+        </div>
+      </template>
+
+
+      <!-- Common Menu List -->
+      <div class="bg-white shadow-md overflow-hidden" :class="isLoggedIn ? 'rounded-b-md rounded-t-none' : 'rounded-md'">
+          <div class="divide-y divide-gray-200">
+            <!-- Item: History -->
+            <div
+              class="hover:bg-gray-50 transition-all cursor-pointer p-4 flex items-center"
+              @click="navigateTo('/history')">
+              <div class="text-gray-500 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div class="flex-1 font-medium text-gray-900">转换历史</div>
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+
+            <!-- Item: Settings -->
+            <div
+              class="hover:bg-gray-50 transition-all cursor-pointer p-4 flex items-center"
+              @click="navigateTo('/settings')">
+              <div class="text-gray-500 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                viewBox="0 0 24 24"><!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE -->
+                <g fill="none" stroke="#666666" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                  <path
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065" />
+                  <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0" />
+                </g>
               </svg>
-              {{ membershipLevel }}
+              </div>
+              <div class="flex-1 font-medium text-gray-900">设置</div>
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+
+            <!-- Item: About Us -->
+            <div
+              class="hover:bg-gray-50 transition-all cursor-pointer p-4 flex items-center"
+              @click="navigateTo('/about')">
+              <div class="text-gray-500 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div class="flex-1 font-medium text-gray-900">关于我们</div>
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </div>
           </div>
-        </div>
       </div>
 
-      <!-- Menu Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div 
-          v-for="(item, index) in menuItems" 
-          :key="index"
-          class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer p-5 transform hover:-translate-y-1"
-          @click="item.title === '会员中心' ? goToShop() : null"
-        >
-          <div class="flex items-start">
-            <div class="text-3xl mr-3">{{ item.icon }}</div>
-            <div class="flex-1">
-              <h3 class="text-base font-semibold text-gray-900 mb-1">
-                {{ item.title }}
-              </h3>
-              <p class="text-gray-600 text-sm">
-                {{ item.description }}
-              </p>
-            </div>
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
+      <template v-if="authEnabled">
+        <!-- Quick Actions for Non-logged Users -->
+        <div v-if="!isLoggedIn"
+          class="mt-6 bg-linear-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
+
+          <h3 class="text-lg font-bold text-gray-900 mb-3">快速链接</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <a :href="LINKS.login" target="_blank"
+              class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all">
+              <span class="font-semibold text-gray-700">登录账号</span>
+              <svg class="w-5 h-5 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+              </svg>
+            </a>
+            <a :href="LINKS.signup" target="_blank"
+              class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all">
+              <span class="font-semibold text-gray-700">注册账号</span>
+              <svg class="w-5 h-5 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+              </svg>
+            </a>
+            <a :href="LINKS.shop" target="_blank"
+              class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all">
+              <span class="font-semibold text-gray-700">购买会员</span>
+              <svg class="w-5 h-5 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+              </svg>
+            </a>
           </div>
         </div>
-      </div>
-
-      <!-- Quick Actions for Non-logged Users -->
-      <div v-if="!isLoggedIn" class="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-100">
-        <h3 class="text-lg font-bold text-gray-900 mb-3">快速链接</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <a 
-            href="https://linjhs.com/login" 
-            target="_blank"
-            class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all"
-          >
-            <span class="font-semibold text-gray-700">登录账号</span>
-            <svg class="w-5 h-5 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-            </svg>
-          </a>
-          <a 
-            href="https://linjhs.com/signup" 
-            target="_blank"
-            class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all"
-          >
-            <span class="font-semibold text-gray-700">注册账号</span>
-            <svg class="w-5 h-5 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-            </svg>
-          </a>
-          <a 
-            href="https://linjhs.com/shop/products" 
-            target="_blank"
-            class="flex items-center justify-center bg-white px-5 py-3 rounded-lg hover:shadow-md transition-all"
-          >
-            <span class="font-semibold text-gray-700">购买会员</span>
-            <svg class="w-5 h-5 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-            </svg>
-          </a>
-        </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>
+

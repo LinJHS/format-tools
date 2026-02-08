@@ -32,7 +32,7 @@ pub fn get_platform_info() -> (String, String) {
 pub fn get_pandoc_download_urls(config: &PandocConfig) -> DownloadUrls {
     let (os, arch) = get_platform_info();
     let version = &config.version;
-    
+
     let filename = match (os.as_str(), arch.as_str()) {
         ("windows", "x86_64") => format!("pandoc-{}-windows-x86_64.zip", version),
         ("linux", "x86_64") => format!("pandoc-{}-linux-amd64.tar.gz", version),
@@ -41,10 +41,16 @@ pub fn get_pandoc_download_urls(config: &PandocConfig) -> DownloadUrls {
         ("macos", "aarch64") => format!("pandoc-{}-arm64-macOS.zip", version),
         _ => panic!("Unsupported platform: {} {}", os, arch),
     };
-    
-    let base_url = format!("https://github.com/jgm/pandoc/releases/download/{}", version);
-    let mirror_url = format!("https://ghfast.top/https://github.com/jgm/pandoc/releases/download/{}", version);
-    
+
+    let base_url = format!(
+        "https://github.com/jgm/pandoc/releases/download/{}",
+        version
+    );
+    let mirror_url = format!(
+        "https://ghfast.top/https://github.com/jgm/pandoc/releases/download/{}",
+        version
+    );
+
     DownloadUrls {
         primary: format!("{}/{}", base_url, filename),
         mirror: format!("{}/{}", mirror_url, filename),
@@ -54,7 +60,7 @@ pub fn get_pandoc_download_urls(config: &PandocConfig) -> DownloadUrls {
 pub fn get_crossref_download_urls(config: &PandocConfig) -> DownloadUrls {
     let (os, arch) = get_platform_info();
     let version = &config.crossref_version;
-    
+
     let filename = match (os.as_str(), arch.as_str()) {
         ("windows", "x86_64") => "pandoc-crossref-Windows-X64.7z".to_string(),
         ("linux", "x86_64") => "pandoc-crossref-Linux-X64.tar.xz".to_string(),
@@ -63,10 +69,16 @@ pub fn get_crossref_download_urls(config: &PandocConfig) -> DownloadUrls {
         ("macos", "aarch64") => "pandoc-crossref-macOS-ARM64.tar.xz".to_string(),
         _ => panic!("Unsupported platform: {} {}", os, arch),
     };
-    
-    let base_url = format!("https://github.com/lierdakil/pandoc-crossref/releases/download/v{}", version);
-    let mirror_url = format!("https://ghfast.top/https://github.com/lierdakil/pandoc-crossref/releases/download/v{}", version);
-    
+
+    let base_url = format!(
+        "https://github.com/lierdakil/pandoc-crossref/releases/download/v{}",
+        version
+    );
+    let mirror_url = format!(
+        "https://ghfast.top/https://github.com/lierdakil/pandoc-crossref/releases/download/v{}",
+        version
+    );
+
     DownloadUrls {
         primary: format!("{}/{}", base_url, filename),
         mirror: format!("{}/{}", mirror_url, filename),
@@ -74,10 +86,11 @@ pub fn get_crossref_download_urls(config: &PandocConfig) -> DownloadUrls {
 }
 
 pub fn get_install_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app.path()
+    let app_data_dir = app
+        .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-    
+
     let install_dir = app_data_dir.join("pandoc");
     Ok(install_dir)
 }

@@ -1,1 +1,46 @@
 @import 'tailwindcss';
+
+@source "../src/**/*.vue";
+@source "../src/**/*.ts";
+@source "../src/auth-private";
+
+@layer base {
+  /* Disable text selection globally for UI elements */
+  body {
+    @apply select-none;
+  }
+
+  /* Allow text selection in input, textarea, and contenteditable elements */
+  input,
+  textarea,
+  [contenteditable] {
+    @apply select-text;
+  }
+
+  /* Change cursor to pointer for buttons and links */
+  button,
+  a {
+    @apply cursor-pointer;
+  }
+
+  /* Custom Scrollbar for Webkit (Chrome, Edge, Safari) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 hover:bg-gray-400 rounded-full transition-colors;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.300') transparent;
+  }
+}
+
