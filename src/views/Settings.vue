@@ -71,7 +71,7 @@ const handleConfirmClear = async () => {
 }
 
 const textExportPathDisplay = computed(() => {
-  return settingsStore.textExportPath || '默认 (下载文件夹)'
+  return settingsStore.textExportPath || '默认（下载文件夹）'
 })
 
 const selectExportPath = async () => {
