@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "format-tools",
+  "productName": "格式匠",
   "version": "0.2.0",
   "identifier": "com.linjhs.format-tools",
   "build": {
