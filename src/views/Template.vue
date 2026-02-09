@@ -5,6 +5,7 @@ import { useHistoryStore } from '../stores/history'
 import { useSettingsStore } from '../stores/settings'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { error as logError, info as logInfo, debug as logDebug } from '@tauri-apps/plugin-log'
 import { downloadDir, join } from '@tauri-apps/api/path'
 import { LINKS } from '../config/links'
 import { useSafeAuthStore, getSafeAIFormatService } from '../auth/authWrapper'
@@ -66,7 +67,7 @@ onMounted(async () => {
 
   try {
     const response = await pandocService.getTemplates()
-    console.log('Template list fetched:', response) // Debug log
+    logDebug(`Template list fetched: ${JSON.stringify(response)}`) // Debug log
     templates.value = response.templates
     hasPremium.value = response.has_premium
     selectedTemplate.value = templates.value[0] || null
@@ -74,7 +75,7 @@ onMounted(async () => {
     // 初始化配置
     initConfig()
   } catch (e) {
-    console.error('Error fetching template list:', e) // Debug log
+    logError(`Error fetching template list: ${e}`) // Debug log
     error.value = '无法加载模板列表，请稍后重试'
   }
 })
@@ -203,10 +204,10 @@ const convertMarkdown = async () => {
             status: 'success'
           })
           historyStore.prune(limit)
-        } catch (e) { console.error('History log failed', e) }
+        } catch (e) { logError(`History log failed: ${e}`) }
 
       } catch (currentError: any) {
-        console.error(`File ${currentName} failed:`, currentError)
+        logError(`File ${currentName} failed: ${currentError}`)
         results.push({
           fileName: currentName,
           status: 'failed',
@@ -230,7 +231,7 @@ const convertMarkdown = async () => {
             errorMessage: currentError.message || String(currentError)
           })
           historyStore.prune(limit)
-        } catch (e) { console.error('History log failed', e) }
+        } catch (e) { logError(`History log failed: ${e}`) }
       }
     }
 
@@ -239,7 +240,7 @@ const convertMarkdown = async () => {
     router.push('/result')
 
   } catch (err) {
-    console.error('Batch process fatal error:', err)
+    logError(`Batch process fatal error: ${err}`)
     error.value = `处理中断: ${err instanceof Error ? err.message : String(err)}`
   } finally {
     isLoading.value = false
@@ -268,7 +269,7 @@ const handleConfigDialogReset = () => { initConfig() }
 const showConfigDialog = () => { configDialogVisible.value = true }
 
 const handlePresetLoad = (config: Partial<TemplateConfig>) => { userConfig.value = { ...config }; configDialogVisible.value = true }
-const handlePresetSave = (preset: ConfigPreset) => { console.log('预设已保存:', preset.name); configDialogVisible.value = true }
+const handlePresetSave = (preset: ConfigPreset) => { logInfo(`预设已保存: ${preset.name}`); configDialogVisible.value = true }
 const handlePresetDialogClose = () => { presetDialogVisible.value = false }
 
 const openDownloadPage = async () => { await openUrl(LINKS.releases) }

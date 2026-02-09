@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
+import { error as logError } from '@tauri-apps/plugin-log'
 import { useSettingsStore } from '../stores/settings'
 import { useHistoryStore } from '../stores/history'
 import { useSafeAuthStore } from '../auth/authWrapper'
@@ -63,7 +64,7 @@ const handleConfirmClear = async () => {
     // 2. Clear remote sessions
     await invoke('clear_sessions')
   } catch (err) {
-    console.error('Failed to clear sessions:', err)
+    logError(`Failed to clear sessions: ${err}`)
   }
   showClearDialog.value = false
 }
@@ -84,7 +85,7 @@ const selectExportPath = async () => {
       settingsStore.textExportPath = selected
     }
   } catch (err) {
-    console.error('Failed to select directory:', err)
+    logError(`Failed to select directory: ${err}`)
   }
 }
 

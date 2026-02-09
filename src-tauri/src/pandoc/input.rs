@@ -225,7 +225,7 @@ fn extract_and_copy_images(
                     let target = assets_dir.join(&unique_name);
 
                     if let Err(err) = fs::copy(&source, &target) {
-                        eprintln!("Failed to copy image {}: {}", img_path_str, err);
+                        log::error!("Failed to copy image {}: {}", img_path_str, err);
                         return caps.get(0).map(|m| m.as_str()).unwrap_or("").to_string();
                     }
 

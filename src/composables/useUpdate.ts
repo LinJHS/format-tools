@@ -2,6 +2,7 @@ import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { ask, message } from '@tauri-apps/plugin-dialog';
 import { sendNotification, isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
+import { error as logError } from '@tauri-apps/plugin-log';
 
 export async function checkForAppUpdate(silent = false) {
   try {
@@ -50,7 +51,7 @@ export async function checkForAppUpdate(silent = false) {
       }
     }
   } catch (error) {
-    console.error('更新失败:', error);
+    logError(`更新失败: ${error}`);
     if (!silent) {
       const msg = error instanceof Error ? error.message : String(error);
       await message(`检查更新出错: ${msg}\n\n请检查您的网络连接或稍后重试。如有问题，请联系客服。`, { title: '格式匠 - 错误', kind: 'error' });

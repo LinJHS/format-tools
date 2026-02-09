@@ -1267,13 +1267,14 @@ dependencies = [
 
 [[package]]
 name = "format-tools"
-version = "0.2.3"
+version = "0.2.5"
 dependencies = [
  "aes",
  "cbc",
  "cipher",
  "flate2",
  "futures",
+ "log",
  "regex",
  "reqwest",
  "serde",

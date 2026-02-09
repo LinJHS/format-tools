@@ -219,13 +219,19 @@ jobs:
 
           # Create Partial Manifest
           manifest_data = {
-              "platforms": {
-                  platform: {
-                      "signature": signature_content,
-                      "url": f"{os.environ['BASE_URL']}/gsj/releases/{platform}/{c_version}/{urllib.parse.quote(filename)}"
-                  }
-              }
+              "platforms": {}
           }
+          
+          entry = {
+              "signature": signature_content,
+              "url": f"{os.environ['BASE_URL']}/gsj/releases/{platform}/{c_version}/{urllib.parse.quote(filename)}"
+          }
+
+          if platform == 'darwin-universal':
+              manifest_data["platforms"]["darwin-aarch64"] = entry
+              manifest_data["platforms"]["darwin-x86_64"] = entry
+          else:
+              manifest_data["platforms"][platform] = entry
           
           with open(f"{platform}.json", "w") as f:
               json.dump(manifest_data, f)

@@ -2,6 +2,7 @@
  * 文件处理工具
  * 用于处理文件上传和转换
  */
+import { error as logError } from '@tauri-apps/plugin-log'
 
 export interface FileInfo {
   name: string
@@ -84,7 +85,7 @@ export const readMultipleFiles = async (files: File[]): Promise<FileInfo[]> => {
           content
         })
       } catch (error) {
-        console.error(`Failed to read file: ${file.name}`, error)
+        logError(`Failed to read file: ${file.name}, error: ${error}`)
       }
     }
   }
