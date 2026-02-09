@@ -1,7 +1,7 @@
 {
   "name": "format-tools",
   "private": true,
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "格式匠 - 您的全能文档转换工具",
   "type": "module",
   "scripts": {
