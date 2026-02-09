@@ -188,8 +188,9 @@ pub fn get_pandoc_version(app: &AppHandle) -> Result<String, String> {
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     }
-    
-    let output = cmd.arg("--version")
+
+    let output = cmd
+        .arg("--version")
         .output()
         .map_err(|e| format!("Failed to get version: {}", e))?;
 

@@ -2,14 +2,13 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
+import { open } from '@tauri-apps/plugin-dialog'
 import { pandocService, PreparedInput, PrepareInputPayload } from '../services/pandocService'
 import DownloadProgress from '../components/DownloadProgress.vue'
 
 const uploadStore = useUploadStore()
 const router = useRouter()
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const batchFileInput = ref<HTMLInputElement | null>(null)
 const activeTab = ref<'file' | 'batch' | 'text'>('file')
 const selectedFile = ref<File | null>(null)
 const textContent = ref('')
@@ -169,47 +168,61 @@ const isSupportedFile = (fileName: string) => {
   return supportedExtensions.some((ext) => lower.endsWith(ext))
 }
 
-const openFilePicker = () => {
-  fileInput.value?.click()
-}
+const openFilePicker = async () => {
+  try {
+    const selected = await open({
+      multiple: false,
+      filters: [{
+        name: 'Supported Files',
+        extensions: ['md', 'markdown', 'txt', 'zip', '7z', 'tar.gz', 'tar.xz']
+      }]
+    })
 
-const openBatchFilePicker = () => {
-  batchFileInput.value?.click()
-}
-
-const handleFileSelect = (e: Event) => {
-  const input = e.target as HTMLInputElement
-  if (input.files && input.files.length > 0) {
-    const file = input.files[0]
-    if (isSupportedFile(file.name)) {
-      selectedFile.value = file
-      prepareError.value = ''
-    } else {
-      prepareError.value = '仅支持 .md/.markdown/.txt/.zip/.7z/.tar.gz/.tar.xz 文件'
-    }
-  }
-}
-
-const handleBatchFileSelect = (e: Event) => {
-  const input = e.target as HTMLInputElement
-  if (input.files && input.files.length > 0) {
-    const files: File[] = []
-    let hasError = false
-    for (let i = 0; i < input.files.length; i++) {
-      const file = input.files[i]
-      if (isSupportedFile(file.name)) {
-        files.push(file)
+    if (selected && typeof selected === 'string') {
+      const fileName = selected.split(/[\\/]/).pop() || 'unknown'
+      if (isSupportedFile(fileName)) {
+        selectedFile.value = createFakeFile(fileName, selected)
+        prepareError.value = ''
+        activeTab.value = 'file'
       } else {
-        hasError = true
+        prepareError.value = '不支持的文件格式'
       }
     }
-    if (files.length > 0) {
-      uploadStore.addFiles(files)
-      prepareError.value = hasError ? '部分不支持的文件已被跳过' : ''
-    }
+  } catch (err) {
+    console.error('File selection failed:', err)
   }
-  // clear input to allow re-selecting same files
-  input.value = ''
+}
+
+const openBatchFilePicker = async () => {
+  try {
+    const selected = await open({
+      multiple: true,
+      filters: [{
+        name: 'Supported Files',
+        extensions: ['md', 'markdown', 'txt', 'zip', '7z', 'tar.gz', 'tar.xz']
+      }]
+    })
+
+    if (selected && Array.isArray(selected)) {
+      const files: File[] = []
+      let hasError = false
+      for (const filePath of selected) {
+        const fileName = filePath.split(/[\\/]/).pop() || 'unknown'
+        if (isSupportedFile(fileName)) {
+          files.push(createFakeFile(fileName, filePath))
+        } else {
+          hasError = true
+        }
+      }
+
+      if (files.length > 0) {
+        uploadStore.addFiles(files)
+        prepareError.value = hasError ? '部分不支持的文件已被跳过' : ''
+      }
+    }
+  } catch (err) {
+    console.error('Batch file selection failed:', err)
+  }
 }
 
 const clearSelection = () => {
@@ -409,8 +422,6 @@ const nextStep = async () => {
           class="border-2 border-dashed border-[#c7d2fe] rounded-xl p-6 text-center bg-white transition-all cursor-pointer flex-1 flex flex-col justify-center"
           :class="{ 'border-[#7c3aed] bg-[#f5f3ff] shadow-[0_10px_30px_rgba(124,58,237,0.16)]': dragActive }"
           @click="openFilePicker">
-          <input type="file" ref="fileInput" class="hidden" :accept="supportedExtensions.join(',')"
-            @change="handleFileSelect" />
           <div class="text-3xl text-[#7c3aed] mb-1">⬆</div>
           <p class="m-0 font-bold text-[#111827] text-lg">点击或拖拽文件到这里</p>
           <p class="m-0 mt-1 text-[#4b5563] text-sm">支持 .md / .markdown / .txt / .zip / .7z / .tar.gz / .tar.xz</p>
@@ -433,8 +444,6 @@ const nextStep = async () => {
           class="border-2 border-dashed border-[#c7d2fe] rounded-xl p-6 text-center bg-white transition-all cursor-pointer flex-none flex flex-col justify-center mb-4"
           :class="{ 'border-[#7c3aed] bg-[#f5f3ff] shadow-[0_10px_30px_rgba(124,58,237,0.16)]': dragActive }"
           @click="openBatchFilePicker">
-          <input type="file" ref="batchFileInput" class="hidden" multiple :accept="supportedExtensions.join(',')"
-            @change="handleBatchFileSelect" />
           <div class="text-3xl text-[#7c3aed] mb-1">📚</div>
           <p class="m-0 font-bold text-[#111827] text-lg">点击或拖拽多个文件到这里</p>
           <p class="m-0 mt-1 text-[#4b5563] text-sm">支持 .md / .zip / .7z 等格式批量转换</p>

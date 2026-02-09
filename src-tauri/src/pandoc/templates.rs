@@ -95,7 +95,10 @@ fn find_template_resource(
     ];
 
     for candidate in &candidates {
-        if let Ok(path) = app_handle.path().resolve(candidate, BaseDirectory::Resource) {
+        if let Ok(path) = app_handle
+            .path()
+            .resolve(candidate, BaseDirectory::Resource)
+        {
             if path.exists() {
                 return Ok(TemplateResource { path, encrypted });
             }

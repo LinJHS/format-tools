@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import { useSettingsStore } from '../stores/settings'
 import { useHistoryStore } from '../stores/history'
 import { useSafeAuthStore } from '../auth/authWrapper'
@@ -67,6 +68,26 @@ const handleConfirmClear = async () => {
   showClearDialog.value = false
 }
 
+const textExportPathDisplay = computed(() => {
+  return settingsStore.textExportPath || '默认 (下载文件夹)'
+})
+
+const selectExportPath = async () => {
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: '选择导出文件夹'
+    })
+
+    if (selected && typeof selected === 'string') {
+      settingsStore.textExportPath = selected
+    }
+  } catch (err) {
+    console.error('Failed to select directory:', err)
+  }
+}
+
 const goBack = () => {
   router.back()
 }
@@ -119,6 +140,31 @@ const goBack = () => {
       </div>
     </div>
 
+    <!-- Group: Export Settings -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+      <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <h2 class="font-semibold text-gray-900">导出设置</h2>
+      </div>
+
+      <div class="divide-y divide-gray-100">
+        <div class="p-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <label class="block font-medium text-gray-900">文本导出位置</label>
+              <p class="text-sm text-gray-500 mt-1">设置粘贴文本转换后的默认保存文件夹</p>
+            </div>
+            <button @click="selectExportPath"
+              class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm flex items-center gap-2 max-w-xs truncate">
+              <span class="truncate">{{ textExportPathDisplay }}</span>
+              <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Group: Danger Zone -->
     <div class="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden">
       <div class="p-4">
@@ -135,13 +181,7 @@ const goBack = () => {
       </div>
     </div>
 
-    <ConfirmDialog 
-      :visible="showClearDialog"
-      title="清空转换历史"
-      message="此操作将删除所有本地转换历史记录，您的文件不会被删除。此操作无法撤销。"
-      confirmText="立即清空"
-      @confirm="handleConfirmClear"
-      @cancel="showClearDialog = false"
-    />
+    <ConfirmDialog :visible="showClearDialog" title="清空转换历史" message="此操作将删除所有本地转换历史记录，您的文件不会被删除。此操作无法撤销。"
+      confirmText="立即清空" @confirm="handleConfirmClear" @cancel="showClearDialog = false" />
   </div>
 </template>
