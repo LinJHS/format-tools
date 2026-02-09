@@ -44,6 +44,12 @@ pub async fn convert_md_to_docx(
 
     let mut cmd = Command::new(&pandoc_exe);
 
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
     // 基本参数
     cmd.arg(&options.input_file).arg("-o").arg(&output_path);
 
@@ -176,8 +182,14 @@ pub fn get_pandoc_version(app: &AppHandle) -> Result<String, String> {
         return Err("Pandoc not installed".to_string());
     }
 
-    let output = Command::new(&pandoc_exe)
-        .arg("--version")
+    let mut cmd = Command::new(&pandoc_exe);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    
+    let output = cmd.arg("--version")
         .output()
         .map_err(|e| format!("Failed to get version: {}", e))?;
 
