@@ -88,18 +88,17 @@ fn find_template_resource(
     }
 
     // 2. Production Environment: Check Resource directory
-    // In production, everything is in the 'templates' subdirectory of resources
-    let resource_path = app_handle
-        .path()
-        .resolve(
-            Path::new("templates").join(&filename),
-            BaseDirectory::Resource,
-        )
-        .ok();
+    // In production, check both 'templates' and 'resources/templates' subdirectories
+    let candidates = [
+        Path::new("templates").join(&filename),
+        Path::new("resources").join("templates").join(&filename),
+    ];
 
-    if let Some(path) = resource_path {
-        if path.exists() {
-            return Ok(TemplateResource { path, encrypted });
+    for candidate in &candidates {
+        if let Ok(path) = app_handle.path().resolve(candidate, BaseDirectory::Resource) {
+            if path.exists() {
+                return Ok(TemplateResource { path, encrypted });
+            }
         }
     }
 
