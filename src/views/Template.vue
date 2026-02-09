@@ -273,6 +273,13 @@ const handlePresetSave = (preset: ConfigPreset) => { logInfo(`预设已保存: $
 const handlePresetDialogClose = () => { presetDialogVisible.value = false }
 
 const openDownloadPage = async () => { await openUrl(LINKS.releases) }
+const handleLockedClick = () => {
+  if (!authStore.isLoggedIn) {
+    router.push('/login')
+  } else {
+    openUrl(LINKS.shop)
+  }
+}
 const isSelected = (template: TemplateMeta) => { return selectedTemplate.value?.id === template.id }
 </script>
 
@@ -320,12 +327,16 @@ const isSelected = (template: TemplateMeta) => { return selectedTemplate.value?.
     <section class="max-w-6xl mx-auto mb-8">
       <h2 class="text-lg font-bold text-[#1f2937] m-0 mb-4">会员模板</h2>
 
-      <!-- Bucket 1: Authenticated & Has Access -> Show List -->
-      <div v-if="authEnabled && hasAccess && memberTemplates.length > 0"
+      <!-- Unified Member Grid: Show always if auth enabled, with lock overlay if no access -->
+      <div v-if="authEnabled && memberTemplates.length > 0"
         class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-        <div v-for="template in memberTemplates" :key="template.id" @click="selectTemplate(template)"
-          class="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 cursor-pointer transition-all flex flex-col shadow-sm hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
-          :class="[isSelected(template) ? 'border-[#7c3aed]! bg-[#faf5ff]! shadow-[0_4px_20px_rgba(124,58,237,0.2)]!' : '']">
+        <div v-for="template in memberTemplates" :key="template.id"
+          class="relative bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-col shadow-sm transition-all overflow-hidden"
+          :class="[
+            isSelected(template) ? 'border-[#7c3aed]! bg-[#faf5ff]! shadow-[0_4px_20px_rgba(124,58,237,0.2)]!' : '',
+            hasAccess ? 'cursor-pointer hover:border-[#c7d2fe] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5' : 'cursor-not-allowed'
+          ]" @click="hasAccess ? selectTemplate(template) : handleLockedClick()">
+
           <div v-if="isSelected(template)" class="h-3 flex justify-end -mb-3">
             <div class="text-[#16a34a] font-bold text-sm">✓ 已选择</div>
           </div>
@@ -336,43 +347,16 @@ const isSelected = (template: TemplateMeta) => { return selectedTemplate.value?.
             </h3>
             <p class="m-0 text-[#6b7280] text-[13px] leading-relaxed">{{ template.description }}</p>
           </div>
+
+          <!-- Locked Overlay -->
+          <div v-if="!hasAccess"
+            class="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center text-gray-500 select-none transition-opacity hover:bg-white/50">
+            <div class="text-3xl mb-2">🔒</div>
+            <div class="text-xs font-bold uppercase tracking-wider bg-white/80 px-3 py-1 rounded-full shadow-sm">
+              {{ authStore.isLoggedIn ? '会员专享' : '登录解锁' }}
+            </div>
+          </div>
         </div>
-      </div>
-
-      <!-- Bucket 2: Not Logged In (Login Prompt) -->
-      <div v-else-if="authEnabled && !authStore.isLoggedIn"
-        class="bg-[linear-gradient(135deg,#eff6ff,#dbeafe)] border-2 border-dashed border-[#60a5fa] rounded-2xl p-10 text-center text-[#1d4ed8]">
-        <div class="text-5xl mb-3">🔒</div>
-        <p class="m-0 font-semibold text-lg mb-2">登录后解锁会员模板</p>
-        <p class="m-0 mt-1 text-[#2563eb] text-sm mb-4">登录账号，畅享海量专业文档模板</p>
-        <button @click="router.push('/login')"
-          class="inline-flex items-center gap-2 bg-[#2563eb] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] transition-colors cursor-pointer border-0 shadow-lg shadow-blue-200">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-            <polyline points="10 17 15 12 10 7"></polyline>
-            <line x1="15" y1="12" x2="3" y2="12"></line>
-          </svg>
-          立即登录
-        </button>
-      </div>
-
-      <!-- Bucket 3: Authenticated but No Access (Upgrade Prompt) -->
-      <div v-else-if="authEnabled && authStore.isLoggedIn && !hasAccess"
-        class="bg-[linear-gradient(135deg,#fdf4ff,#fce7f3)] border-2 border-dashed border-[#f472b6] rounded-2xl p-10 text-center text-[#be185d]">
-        <div class="text-5xl mb-3">💎</div>
-        <p class="m-0 font-semibold text-lg mb-2">升级会员解锁专业模板</p>
-        <p class="m-0 mt-1 text-[#db2777] text-sm mb-4">获取更多精美模板，提升文档专业度</p>
-        <button @click="openUrl(LINKS.shop)"
-          class="inline-flex items-center gap-2 bg-[#db2777] text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#be185d] transition-colors cursor-pointer border-0 shadow-lg shadow-pink-200">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon
-              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-            </polygon>
-          </svg>
-          立即升级
-        </button>
       </div>
 
       <div v-else-if="!authEnabled"
