@@ -267,8 +267,8 @@ fn inject_metadata_to_markdown(file_path: &str, metadata: &Value) -> Result<(), 
 /// 清理旧的 session 目录，只保留最新的5个
 fn cleanup_old_sessions(app: &AppHandle) {
     if let Ok(cache_dir) = app.path().cache_dir() {
-        // sessions are stored directly under format-tools directory
-        let format_tools_dir = cache_dir.join("format-tools");
+        // sessions are stored directly under formatsman directory
+        let format_tools_dir = cache_dir.join("formatsman");
         if !format_tools_dir.exists() {
             return;
         }
@@ -311,7 +311,7 @@ pub fn delete_all_sessions(app: &AppHandle) -> Result<(), String> {
         .cache_dir()
         .map_err(|e| format!("Failed to get cache dir: {}", e))?;
 
-    let format_tools_dir = cache_dir.join("format-tools");
+    let format_tools_dir = cache_dir.join("formatsman");
     if !format_tools_dir.exists() {
         return Ok(());
     }

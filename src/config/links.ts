@@ -7,5 +7,5 @@ export const LINKS = {
   shop: "https://linjhs.com/shop/product/2",
   uc: "https://linjhs.com/uc/profile",
   contact: "https://linjhs.com/contact-gsj",
-  releases: "https://github.com/linjhs/format-tools/releases"
+  releases: "https://github.com/linjhs/formatsman/releases"
 } as const;
