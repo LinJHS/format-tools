@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { error as logError } from '@tauri-apps/plugin-log'
 
 export const useSettingsStore = defineStore('settings', () => {
   // Default to 100, but effective limit will be clamped by logic
@@ -18,7 +19,7 @@ export const useSettingsStore = defineStore('settings', () => {
         textExportPath.value = parsed.textExportPath
       }
     } catch (e) {
-      console.error('Failed to parse settings', e)
+      logError(`Failed to parse settings: ${e}`)
     }
   }
 

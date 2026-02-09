@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useUploadStore } from '../stores/upload'
 import { useRouter } from 'vue-router'
 import { open } from '@tauri-apps/plugin-dialog'
+import { error as logError, warn as logWarn } from '@tauri-apps/plugin-log'
 import { pandocService, PreparedInput, PrepareInputPayload } from '../services/pandocService'
 import DownloadProgress from '../components/DownloadProgress.vue'
 
@@ -60,7 +61,7 @@ const installDependencies = async () => {
     isInstalling.value = false
     installDetail.value = ''
   } catch (error) {
-    console.error('安装失败:', error)
+    logError(`安装失败: ${error}`)
     isInstalling.value = true
     isError.value = true
     installTitle.value = '组件下载失败'
@@ -130,7 +131,7 @@ const setupFileDropListener = async () => {
       }
     })
   } catch (error) {
-    console.warn('无法设置拖拽监听器:', error)
+    logWarn(`无法设置拖拽监听器: ${error}`)
   }
 }
 
@@ -189,7 +190,7 @@ const openFilePicker = async () => {
       }
     }
   } catch (err) {
-    console.error('File selection failed:', err)
+    logError(`File selection failed: ${err}`)
   }
 }
 
@@ -221,7 +222,7 @@ const openBatchFilePicker = async () => {
       }
     }
   } catch (err) {
-    console.error('Batch file selection failed:', err)
+    logError(`Batch file selection failed: ${err}`)
   }
 }
 
@@ -276,7 +277,7 @@ const confirmMdSelection = async () => {
     showMdSelectionDialog.value = false
     router.push('/template')
   } catch (error) {
-    console.error('预处理失败:', error)
+    logError(`预处理失败: ${error}`)
     prepareError.value = '预处理失败'
   } finally {
     isPreparing.value = false
@@ -377,7 +378,7 @@ const nextStep = async () => {
     router.push('/template')
 
   } catch (error) {
-    console.error('预处理失败:', error)
+    logError(`预处理失败: ${error}`)
     prepareError.value = `预处理失败: ${error instanceof Error ? error.message : String(error)}`
   } finally {
     isPreparing.value = false

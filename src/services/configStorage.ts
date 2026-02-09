@@ -4,6 +4,7 @@
  */
 
 import type { TemplateConfig, ConfigPreset } from '../types/templateConfig'
+import { error as logError, warn as logWarn } from '@tauri-apps/plugin-log'
 
 const STORAGE_KEYS = {
   RECENT_CONFIGS: 'template-recent-configs',
@@ -32,7 +33,7 @@ export function saveRecentConfig(config: Partial<TemplateConfig>): void {
     
     localStorage.setItem(STORAGE_KEYS.RECENT_CONFIGS, JSON.stringify(trimmed))
   } catch (error) {
-    console.error('保存历史配置失败:', error)
+    logError(`保存历史配置失败: ${error}`)
   }
 }
 
@@ -46,7 +47,7 @@ export function getRecentConfigs(): Array<{ config: Partial<TemplateConfig>, tim
     
     return JSON.parse(stored)
   } catch (error) {
-    console.error('读取历史配置失败:', error)
+    logError(`读取历史配置失败: ${error}`)
     return []
   }
 }
@@ -58,7 +59,7 @@ export function clearRecentConfigs(): void {
   try {
     localStorage.removeItem(STORAGE_KEYS.RECENT_CONFIGS)
   } catch (error) {
-    console.error('清空历史配置失败:', error)
+    logError(`清空历史配置失败: ${error}`)
   }
 }
 
@@ -86,7 +87,7 @@ export function saveCustomPreset(preset: Omit<ConfigPreset, 'id' | 'createdAt'>)
     
     return newPreset
   } catch (error) {
-    console.error('保存自定义预设失败:', error)
+    logError(`保存自定义预设失败: ${error}`)
     throw error
   }
 }
@@ -100,13 +101,13 @@ export function updateCustomPreset(id: string, preset: Partial<ConfigPreset>): b
     const index = presets.findIndex(p => p.id === id)
     
     if (index === -1) {
-      console.warn(`预设不存在: ${id}`)
+      logWarn(`预设不存在: ${id}`)
       return false
     }
     
     // 不允许修改内置预设
     if (presets[index].isBuiltin) {
-      console.warn('不能修改内置预设')
+      logWarn('不能修改内置预设')
       return false
     }
     
@@ -121,7 +122,7 @@ export function updateCustomPreset(id: string, preset: Partial<ConfigPreset>): b
     localStorage.setItem(STORAGE_KEYS.CUSTOM_PRESETS, JSON.stringify(presets))
     return true
   } catch (error) {
-    console.error('更新自定义预设失败:', error)
+    logError(`更新自定义预设失败: ${error}`)
     return false
   }
 }
@@ -136,7 +137,7 @@ export function getCustomPresets(): ConfigPreset[] {
     
     return JSON.parse(stored)
   } catch (error) {
-    console.error('读取自定义预设失败:', error)
+    logError(`读取自定义预设失败: ${error}`)
     return []
   }
 }
@@ -158,13 +159,13 @@ export function deleteCustomPreset(id: string): boolean {
     const index = presets.findIndex(p => p.id === id)
     
     if (index === -1) {
-      console.warn(`预设不存在: ${id}`)
+      logWarn(`预设不存在: ${id}`)
       return false
     }
     
     // 不允许删除内置预设
     if (presets[index].isBuiltin) {
-      console.warn('不能删除内置预设')
+      logWarn('不能删除内置预设')
       return false
     }
     
@@ -172,7 +173,7 @@ export function deleteCustomPreset(id: string): boolean {
     localStorage.setItem(STORAGE_KEYS.CUSTOM_PRESETS, JSON.stringify(presets))
     return true
   } catch (error) {
-    console.error('删除自定义预设失败:', error)
+    logError(`删除自定义预设失败: ${error}`)
     return false
   }
 }
@@ -184,7 +185,7 @@ export function clearCustomPresets(): void {
   try {
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_PRESETS)
   } catch (error) {
-    console.error('清空自定义预设失败:', error)
+    logError(`清空自定义预设失败: ${error}`)
   }
 }
 

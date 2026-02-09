@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { getVersion } from '@tauri-apps/api/app'
 import { checkForAppUpdate } from '../composables/useUpdate'
+import { error as logError } from '@tauri-apps/plugin-log'
 
 const router = useRouter()
 const douyinCopied = ref(false)
@@ -14,7 +15,7 @@ onMounted(async () => {
 })
 
 const handleCheckUpdate = async () => {
-    await checkForAppUpdate(false)
+  await checkForAppUpdate(false)
 }
 
 const links = {
@@ -40,7 +41,7 @@ const copyDouyin = async () => {
       douyinCopied.value = false
     }, 2000)
   } catch (e) {
-    console.error(e)
+    logError(`${e}`)
   }
 }
 

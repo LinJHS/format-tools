@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { error as logError } from '@tauri-apps/plugin-log'
 
 export interface ConversionRecord {
   id: string
@@ -20,7 +21,7 @@ export const useHistoryStore = defineStore('history', () => {
     try {
       records.value = JSON.parse(saved)
     } catch (e) {
-      console.error('Failed to parse history', e)
+      logError(`Failed to parse history: ${e}`)
     }
   }
 
