@@ -21,9 +21,9 @@ const config: TemplatesConfig = {
   version: 1,
   templates: [
   {
-    "id": "default",
-    "name": "默认模板",
-    "description": "默认 Word 模板，什么样式都没有。",
+    "id": "default_normal",
+    "name": "默认通用模板",
+    "description": "基础通用型Word模板，适配日常办公、简单文档、临时起草，无复杂样式，兼容性最强",
     "category": "free",
     "member": false,
     "defaultPreset": {
@@ -34,9 +34,9 @@ const config: TemplatesConfig = {
     }
   },
   {
-    "id": "plain",
-    "name": "经典模板",
-    "description": "经典 Word 模板，带有基本样式。",
+    "id": "minimal_standard",
+    "name": "极简标准正文模板",
+    "description": "极简规整样式，适合随笔、笔记、草稿、内部简易文档，排版清爽无冗余",
     "category": "free",
     "member": false,
     "defaultPreset": {
@@ -47,9 +47,230 @@ const config: TemplatesConfig = {
     }
   },
   {
-    "id": "plain-member",
-    "name": "经典模板",
-    "description": "经典 Word 模板，带有基本样式。",
+    "id": "official_simple",
+    "name": "简易公文基础模板",
+    "description": "适配基层简易通知、便函、内部告知，符合基础公文排版习惯，简洁正式",
+    "category": "free",
+    "member": false,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "study_homework",
+    "name": "学生作业通用模板",
+    "description": "适配中小学/普通课程作业、读书笔记、课堂报告，排版规范易阅读",
+    "category": "free",
+    "member": false,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "official_document",
+    "name": "党政机关公文基础模板",
+    "description": "贴合机关公文排版规范，适用于通知、决定、报告、请示、函等正式公文",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "academic_thesis",
+    "name": "高校毕业论文模板",
+    "description": "适配本科/专科毕业论文、毕业设计说明书，符合高校通用学术排版要求",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "business_report",
+    "name": "企业商务报告模板",
+    "description": "适配市场报告、运营报告、工作总结、述职报告，商务正式、层级清晰",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "legal_contract",
+    "name": "法律合同正文模板",
+    "description": "适配合同、协议、承诺书、法律文书，字体严谨、段落紧凑、格式规范",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "meeting_minutes",
+    "name": "会议纪要标准模板",
+    "description": "适配公司/部门会议纪要、座谈记录、研讨记录，结构清晰、易梳理要点",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "government_report",
+    "name": "政府工作报告模板",
+    "description": "适配单位工作总结、年度报告、工作汇报，庄重规范、层级分明",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "journal_paper",
+    "name": "学术期刊发表模板",
+    "description": "适配期刊投稿、学术论文、课题成果，符合期刊通用排版标准",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "standard_resume",
+    "name": "标准求职简历模板",
+    "description": "适配应届生/职场人简历，字体简洁、段落紧凑、重点清晰，无冗余格式",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "company_rule",
+    "name": "企业制度规范模板",
+    "description": "适配员工手册、规章制度、管理办法、操作规范，条款化排版、正式严谨",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "project_report",
+    "name": "项目立项/结题报告模板",
+    "description": "适配项目申报、进度汇报、结题总结，商务学术兼顾，结构规范",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "essay_answer",
+    "name": "申论/主观题答题模板",
+    "description": "适配公务员考试、事业单位申论、主观题作答，排版标准、卷面整洁",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "reading_notes",
+    "name": "读书笔记/文摘模板",
+    "description": "适配书籍摘抄、阅读笔记、文献整理，正文清爽、引用区分明显",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "notice_announcement",
+    "name": "正式通知公告模板",
+    "description": "适配学校/企业/社区公开通知、公告、公示，格式标准、醒目正式",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "manual_spec",
+    "name": "产品/操作手册模板",
+    "description": "适配产品说明书、操作规范、培训手册，文字清晰、段落易读",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "research_report",
+    "name": "市场/行业调研报告模板",
+    "description": "适配调研分析、数据总结、行业分析，商务简洁、层级易读",
+    "category": "member",
+    "member": true,
+    "defaultPreset": {
+      "languageStyle": "zh-academic",
+      "sectionNumbering": "none",
+      "crossReference": "basic",
+      "equationNumbering": "manual"
+    }
+  },
+  {
+    "id": "course_paper",
+    "name": "大学课程论文模板",
+    "description": "适配课程作业、小论文、课程报告，符合高校课程作业通用格式",
     "category": "member",
     "member": true,
     "defaultPreset": {
