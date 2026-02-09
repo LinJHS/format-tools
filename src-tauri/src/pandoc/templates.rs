@@ -36,7 +36,7 @@ pub fn prepare_template(
         .map_err(|e| format!("Failed to get cache dir: {}", e))?;
 
     let runtime_dir = cache_root
-        .join("format-tools")
+        .join("formatsman")
         .join("templates")
         .join("runtime");
     fs::create_dir_all(&runtime_dir).map_err(|e| format!("Failed to create runtime dir: {}", e))?;

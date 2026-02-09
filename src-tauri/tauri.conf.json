@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "FormatTools",
+  "productName": "Formatsman",
   "version": "0.2.5",
-  "identifier": "com.linjhs.format-tools",
+  "identifier": "com.linjhs.formatsman",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",

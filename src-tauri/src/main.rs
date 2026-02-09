@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    format_tools_lib::run()
+    formatsman_lib::run()
 }

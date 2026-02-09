@@ -2,8 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
-import { error as logError } from '@tauri-apps/plugin-log'
+import { open, save } from '@tauri-apps/plugin-dialog'
+import { revealItemInDir } from '@tauri-apps/plugin-opener'
+import { error as logError, info as logInfo } from '@tauri-apps/plugin-log'
 import { useSettingsStore } from '../stores/settings'
 import { useHistoryStore } from '../stores/history'
 import { useSafeAuthStore } from '../auth/authWrapper'
@@ -89,6 +90,30 @@ const selectExportPath = async () => {
   }
 }
 
+const exportLogs = async () => {
+  try {
+    const savePath = await save({
+      filters: [{
+        name: 'Zip Archive',
+        extensions: ['zip']
+      }],
+      defaultPath: '格式匠-logs.zip'
+    })
+
+    if (savePath) {
+      await invoke('export_logs', { savePath })
+
+      await revealItemInDir(savePath)
+
+      alert('日志导出成功！')
+      logInfo('Logs exported successfully')
+    }
+  } catch (err) {
+    logError(`Failed to export logs: ${err}`)
+    alert('导出失败，请查看日志文件。')
+  }
+}
+
 const goBack = () => {
   router.back()
 }
@@ -109,7 +134,7 @@ const goBack = () => {
     </div>
 
     <!-- Group: Storage -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
       <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
         <h2 class="font-semibold text-gray-900">存储与记录</h2>
         <span class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">{{ membershipLabel }}</span>
@@ -140,9 +165,8 @@ const goBack = () => {
         </div>
       </div>
     </div>
-
     <!-- Group: Export Settings -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
       <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
         <h2 class="font-semibold text-gray-900">导出设置</h2>
       </div>
@@ -160,6 +184,28 @@ const goBack = () => {
               <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
               </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group: Logs Settings -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+      <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <h2 class="font-semibold text-gray-900">日志设置</h2>
+      </div>
+
+      <div class="divide-y divide-gray-100">
+        <div class="p-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <label class="block font-medium text-gray-900">导出运行日志</label>
+              <p class="text-sm text-gray-500 mt-1">将应用日志打包导出为 ZIP 文件</p>
+            </div>
+            <button @click="exportLogs"
+              class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm">
+              导出日志
             </button>
           </div>
         </div>

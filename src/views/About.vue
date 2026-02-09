@@ -19,7 +19,7 @@ const handleCheckUpdate = async () => {
 }
 
 const links = {
-  repo: 'https://github.com/LinJHS/format-tools',
+  repo: 'https://github.com/LinJHS/formatsman',
   author1: 'https://linjhs.com',
   author2: 'https://rexera.github.io',
   author3: 'https://monticule.tech',
@@ -86,7 +86,7 @@ const goBack = () => {
           <div class="flex">
             <span class="text-gray-600">开源仓库</span>
             <button @click="open(links.repo)" class="ml-2 text-blue-600 hover:underline">
-              GitHub: LinJHS/format-tools
+              GitHub: LinJHS/formatsman
             </button>
           </div>
         </div>

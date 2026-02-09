@@ -291,6 +291,6 @@ fn build_session_dir(app_handle: &AppHandle) -> Result<PathBuf, String> {
         .as_millis();
 
     Ok(root
-        .join("format-tools")
+        .join("formatsman")
         .join(format!("session-{}", millis)))
 }

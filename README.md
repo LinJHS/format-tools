@@ -60,7 +60,7 @@ pnpm tauri build
 
 ## 📧 反馈与支持
 
-- 提交 Issue：[GitHub Issues](https://github.com/LinJHS/format-tools/issues)
+- 提交 Issue：[GitHub Issues](https://github.com/LinJHS/formatsman/issues)
 - 官方邮箱：2360342887@qq.com
 - 社区讨论：欢迎加入用户交流群 (TODO)
 
