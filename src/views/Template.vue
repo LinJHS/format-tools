@@ -5,6 +5,7 @@ import { useHistoryStore } from '../stores/history'
 import { useSettingsStore } from '../stores/settings'
 import { useRouter } from 'vue-router'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { downloadDir, join } from '@tauri-apps/api/path'
 import { LINKS } from '../config/links'
 import { useSafeAuthStore, getSafeAIFormatService } from '../auth/authWrapper'
 import { pandocService, TemplateInfo, TemplateMeta, ConvertOptions } from '../services/pandocService'
@@ -29,7 +30,7 @@ const hasAccess = computed(() => {
 })
 
 // Auth store and ultra member check
-let authStore: any = null
+const authStore = useSafeAuthStore()
 const isUltraMember = ref(false)
 
 const templates = ref<TemplateMeta[]>([])
@@ -57,7 +58,6 @@ onMounted(async () => {
   }
 
   // Initialize auth store
-  authStore = useSafeAuthStore()
   if (authEnabled) {
     // Check if user has active ultra membership
     const membership = authStore.activeMembership
@@ -159,8 +159,17 @@ const convertMarkdown = async () => {
 
         loadingMessage.value = `(${i + 1}/${total}) 转换文档: ${currentName}`
 
+        let explicitOutputPath: string | undefined
+        if (uploadStore.mode === 'text') {
+          const timestamp = Date.now()
+          const fileName = `${timestamp}_格式匠.docx`
+          const targetDir = settingsStore.textExportPath || await downloadDir()
+          explicitOutputPath = await join(targetDir, fileName)
+        }
+
         const convertOptions: ConvertOptions = {
           input_file: input.markdown_path,
+          output_file: explicitOutputPath,
           source_dir: input.source_dir,
           source_name: input.source_name,
           reference_doc: templateInfo.reference_doc,

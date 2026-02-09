@@ -52,7 +52,8 @@ export async function checkForAppUpdate(silent = false) {
   } catch (error) {
     console.error('更新失败:', error);
     if (!silent) {
-      await message(`检查更新出错，请检查您的网络连接或稍后重试。如有问题，请联系客服。`, { title: '格式匠 - 错误', kind: 'error' });
+      const msg = error instanceof Error ? error.message : String(error);
+      await message(`检查更新出错: ${msg}\n\n请检查您的网络连接或稍后重试。如有问题，请联系客服。`, { title: '格式匠 - 错误', kind: 'error' });
     }
   }
 }
