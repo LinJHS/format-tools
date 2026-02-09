@@ -23,12 +23,8 @@ pub fn run() {
                 } else {
                     tauri_plugin_log::log::LevelFilter::Info
                 })
-                .filter(|metadata| !metadata.target().starts_with("tao"))
-                .build(),
-        )
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .level(tauri_plugin_log::log::LevelFilter::Info)
+                .level_for("tao", tauri_plugin_log::log::LevelFilter::Error)
+                .level_for("subclass", tauri_plugin_log::log::LevelFilter::Error)
                 .build(),
         )
         .plugin(tauri_plugin_notification::init())
